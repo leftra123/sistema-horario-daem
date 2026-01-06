@@ -47,38 +47,62 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.75rem;
+
+  /* Paleta Institucional DAEM - Azul y Verde */
+  --daem-blue-50: oklch(0.97 0.01 250);
+  --daem-blue-100: oklch(0.93 0.03 250);
+  --daem-blue-600: oklch(0.50 0.15 250);
+  --daem-blue-700: oklch(0.42 0.15 250);
+  --daem-blue-800: oklch(0.35 0.12 250);
+  --daem-blue-900: oklch(0.25 0.10 250);
+
+  --daem-green-50: oklch(0.97 0.03 160);
+  --daem-green-100: oklch(0.92 0.06 160);
+  --daem-green-500: oklch(0.65 0.17 160);
+  --daem-green-600: oklch(0.55 0.17 160);
+  --daem-green-700: oklch(0.45 0.15 160);
+
+  /* Base colors */
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.20 0.02 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: oklch(0.20 0.02 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.20 0.02 250);
+
+  /* Primary - Azul institucional */
+  --primary: var(--daem-blue-700);
+  --primary-foreground: oklch(0.99 0 0);
+
+  /* Secondary - Verde institucional */
+  --secondary: var(--daem-green-600);
+  --secondary-foreground: oklch(0.99 0 0);
+
+  --muted: oklch(0.96 0.005 250);
+  --muted-foreground: oklch(0.50 0.02 250);
+  --accent: var(--daem-green-100);
+  --accent-foreground: var(--daem-green-700);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --border: oklch(0.90 0.01 250);
+  --input: oklch(0.90 0.01 250);
+  --ring: var(--daem-blue-600);
+
+  /* Charts - Paleta educativa */
+  --chart-1: var(--daem-blue-600);
+  --chart-2: var(--daem-green-600);
+  --chart-3: oklch(0.60 0.20 70);  /* Amarillo */
+  --chart-4: oklch(0.55 0.18 330); /* Púrpura */
+  --chart-5: oklch(0.60 0.20 25);  /* Naranja */
+
+  --sidebar: oklch(0.98 0.005 250);
+  --sidebar-foreground: oklch(0.20 0.02 250);
+  --sidebar-primary: var(--daem-blue-700);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: var(--daem-blue-50);
+  --sidebar-accent-foreground: var(--daem-blue-700);
+  --sidebar-border: oklch(0.90 0.01 250);
+  --sidebar-ring: var(--daem-blue-600);
 }
 
 .dark {

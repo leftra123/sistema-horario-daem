@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpiar Datos - Sistema Horario</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        .warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        button.secondary {
+            background: #6b7280;
+        }
+        button.secondary:hover {
+            background: #4b5563;
+        }
+        button.success {
+            background: #10b981;
+        }
+        button.success:hover {
+            background: #059669;
+        }
+        .data-display {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            display: block;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Limpiar Datos del Sistema</h1>
+        <p style="color: #6b7280;">Herramienta de mantenimiento para el Sistema de Carga Horaria DAEM</p>
+
+        <div class="warning">
+            <strong>⚠️ Advertencia:</strong> Esta acción eliminará TODOS los datos almacenados en el navegador, incluyendo docentes, horarios y configuraciones. Esta acción no se puede deshacer.
+        </div>
+
+        <div class="info">
+            <strong>ℹ️ Cuándo usar esto:</strong>
+            <ul>
+                <li>Cuando los horarios no se asignan correctamente</li>
+                <li>Cuando aparecen conflictos fantasma</li>
+                <li>Cuando los datos parecen corruptos</li>
+                <li>Para empezar de cero con el sistema</li>
+            </ul>
+        </div>
+
+        <h2>Datos Actuales</h2>
+        <div class="data-display" id="currentData">Cargando...</div>
+
+        <div class="status" id="status"></div>
+
+        <div style="margin-top: 30px;">
+            <button onclick="repairData()" class="success">🔧 Reparar Datos Automáticamente</button>
+            <button onclick="viewData()" class="secondary">🔍 Ver Datos Detallados</button>
+            <button onclick="exportData()" class="secondary">💾 Exportar Backup</button>
+            <br><br>
+            <button onclick="clearOnlyHorarios()" class="secondary">📅 Solo Limpiar Horarios</button>
+            <button onclick="clearData()">🗑️ Eliminar Todos los Datos</button>
+            <br><br>
+            <button onclick="location.href='/'" class="success">← Volver al Sistema</button>
+        </div>
+    </div>
+
+    <script>
+        function showStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + (isError ? 'error' : 'success');
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+
+        function loadCurrentData() {
+            try {
+                const data = localStorage.getItem('sistema-horario-storage');
+                if (!data) {
+                    document.getElementById('currentData').innerHTML = '<em>No hay datos almacenados</em>';
+                    return;
+                }
+
+                const parsed = JSON.parse(data);
+                const state = parsed.state || {};
+
+                const summary = `
+📊 Resumen:
+- Docentes: ${state.docentes?.length || 0}
+- Establecimientos: ${state.establecimientos?.length || 0}
+- Cursos con horario: ${Object.keys(state.horarios || {}).length}
+- Bloques configurados: ${Object.keys(state.bloquesConfig || {}).length}
+
+Última actualización: ${new Date().toLocaleString('es-CL')}
+                `.trim();
+
+                document.getElementById('currentData').textContent = summary;
+            } catch (error) {
+                document.getElementById('currentData').innerHTML = '<span style="color: red;">Error al cargar datos: ' + error.message + '</span>';
+            }
+        }
+
+        function viewData() {
+            try {
+                const data = localStorage.getItem('sistema-horario-storage');
+                if (!data) {
+                    alert('No hay datos para mostrar');
+                    return;
+                }
+
+                const formatted = JSON.stringify(JSON.parse(data), null, 2);
+                const dataDisplay = document.getElementById('currentData');
+                dataDisplay.textContent = formatted;
+                dataDisplay.style.maxHeight = '600px';
+                showStatus('Datos mostrados en formato JSON');
+            } catch (error) {
+                showStatus('Error al mostrar datos: ' + error.message, true);
+            }
+        }
+
+        function exportData() {
+            try {
+                const data = localStorage.getItem('sistema-horario-storage');
+                if (!data) {
+                    alert('No hay datos para exportar');
+                    return;
+                }
+
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup-horarios-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                showStatus('✅ Backup exportado correctamente');
+            } catch (error) {
+                showStatus('Error al exportar: ' + error.message, true);
+            }
+        }
+
+        function clearData() {
+            if (!confirm('¿Estás seguro de eliminar TODOS los datos?\n\nEsto incluye:\n- Docentes\n- Horarios\n- Establecimientos\n- Configuraciones\n\nEsta acción NO se puede deshacer.')) {
+                return;
+            }
+
+            if (!confirm('ÚLTIMA CONFIRMACIÓN: ¿Realmente deseas eliminar todo?')) {
+                return;
+            }
+
+            try {
+                localStorage.removeItem('sistema-horario-storage');
+                showStatus('✅ Todos los datos han sido eliminados. Recarga la página para empezar de cero.');
+                setTimeout(() => {
+                    loadCurrentData();
+                }, 1000);
+            } catch (error) {
+                showStatus('Error al eliminar: ' + error.message, true);
+            }
+        }
+
+        function repairData() {
+            try {
+                const data = localStorage.getItem('sistema-horario-storage');
+                if (!data) {
+                    showStatus('No hay datos para reparar', true);
+                    return;
+                }
+
+                const parsed = JSON.parse(data);
+                if (!parsed.state || !parsed.state.horarios) {
+                    showStatus('No hay horarios para reparar', true);
+                    return;
+                }
+
+                let reparados = 0;
+                let eliminados = 0;
+                const nuevosHorarios = {};
+
+                // Reparar cada curso
+                Object.entries(parsed.state.horarios).forEach(([cursoKey, horarioCurso]) => {
+                    const nuevoCurso = {};
+
+                    Object.entries(horarioCurso).forEach(([bloqueKey, bloque]) => {
+                        // Verificar si falta docenteNombre
+                        if (!bloque.docenteNombre && bloque.docenteId && parsed.state.docentes) {
+                            const docente = parsed.state.docentes.find(d => d.id === bloque.docenteId);
+                            if (docente) {
+                                nuevoCurso[bloqueKey] = {
+                                    ...bloque,
+                                    docenteNombre: docente.nombre
+                                };
+                                reparados++;
+                            } else {
+                                eliminados++;
+                            }
+                        } else if (bloque.docenteNombre && bloque.asignatura && bloque.docenteId) {
+                            nuevoCurso[bloqueKey] = bloque;
+                        } else {
+                            eliminados++;
+                        }
+                    });
+
+                    if (Object.keys(nuevoCurso).length > 0) {
+                        nuevosHorarios[cursoKey] = nuevoCurso;
+                    }
+                });
+
+                parsed.state.horarios = nuevosHorarios;
+                localStorage.setItem('sistema-horario-storage', JSON.stringify(parsed));
+
+                showStatus(`✅ Reparación completada: ${reparados} bloques reparados, ${eliminados} bloques eliminados`);
+                setTimeout(() => {
+                    loadCurrentData();
+                }, 1000);
+            } catch (error) {
+                showStatus('Error al reparar datos: ' + error.message, true);
+            }
+        }
+
+        function clearOnlyHorarios() {
+            if (!confirm('¿Eliminar solo los horarios asignados?\n\nEsto mantendrá:\n✓ Docentes\n✓ Establecimientos\n✓ Configuraciones\n\nPero eliminará:\n✗ Todos los horarios creados')) {
+                return;
+            }
+
+            try {
+                const data = localStorage.getItem('sistema-horario-storage');
+                if (!data) {
+                    showStatus('No hay datos para modificar', true);
+                    return;
+                }
+
+                const parsed = JSON.parse(data);
+                if (parsed.state) {
+                    parsed.state.horarios = {};
+                }
+
+                localStorage.setItem('sistema-horario-storage', JSON.stringify(parsed));
+                showStatus('✅ Horarios eliminados. Los docentes y establecimientos se mantienen.');
+                setTimeout(() => {
+                    loadCurrentData();
+                }, 1000);
+            } catch (error) {
+                showStatus('Error al limpiar horarios: ' + error.message, true);
+            }
+        }
+
+        // Cargar datos al inicio
+        loadCurrentData();
+    </script>
+</body>
+</html>
