@@ -50,6 +50,7 @@ export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProp
 
   // Encontrar todos los bloques donde está asignado el docente
   const bloquesAsignados = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const asignaciones: Record<string, { curso: string; asignatura: any; dia: string; bloqueId: number }> = {};
 
     Object.entries(horarios).forEach(([cursoKey, horarioCurso]) => {

@@ -60,9 +60,32 @@ export default function FormularioEstablecimiento({
   const [colacionBloque, setColacionBloque] = useState(6);
   const [colacionDuracion, setColacionDuracion] = useState(30);
 
+  const resetForm = () => {
+    setNombre('');
+    setNiveles('1-8');
+    setPrioritarios(false);
+    setProporcion('60/40');
+    setSecciones(['A']);
+    setAsignaturasSeleccionadas([]);
+    setNuevaAsignaturaNombre('');
+    setUsarPersonalizada(false);
+    setHoraInicio('08:00');
+    setHoraTermino('16:45');
+    setDuracionBloque(45);
+    setRecreos([
+      { bloque: 2, duracionMinutos: 15 },
+      { bloque: 5, duracionMinutos: 15 },
+      { bloque: 9, duracionMinutos: 15 }
+    ]);
+    setTieneColacion(true);
+    setColacionBloque(6);
+    setColacionDuracion(30);
+  };
+
   // Cargar datos si estamos editando
   useEffect(() => {
     if (establecimientoToEdit) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNombre(establecimientoToEdit.nombre);
       setNiveles(establecimientoToEdit.niveles);
       setPrioritarios(establecimientoToEdit.prioritarios);
@@ -90,28 +113,6 @@ export default function FormularioEstablecimiento({
       resetForm();
     }
   }, [establecimientoToEdit, open]);
-
-  const resetForm = () => {
-    setNombre('');
-    setNiveles('1-8');
-    setPrioritarios(false);
-    setProporcion('60/40');
-    setSecciones(['A']);
-    setAsignaturasSeleccionadas([]);
-    setNuevaAsignaturaNombre('');
-    setUsarPersonalizada(false);
-    setHoraInicio('08:00');
-    setHoraTermino('16:45');
-    setDuracionBloque(45);
-    setRecreos([
-      { bloque: 2, duracionMinutos: 15 },
-      { bloque: 5, duracionMinutos: 15 },
-      { bloque: 9, duracionMinutos: 15 }
-    ]);
-    setTieneColacion(true);
-    setColacionBloque(6);
-    setColacionDuracion(30);
-  };
 
   const handleAgregarSeccion = () => {
     if (nuevaSeccion.trim() && !secciones.includes(nuevaSeccion.trim().toUpperCase())) {

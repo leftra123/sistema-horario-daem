@@ -24,7 +24,7 @@ export function autoGenerarHorarioCurso(
   horarios: HorarioData,
   establecimientos: Establecimiento[],
   getHorasUsadasDocente: (docenteId: number) => number,
-  tieneConflictoHorario: (docenteId: number, dia: string, bloqueId: number, cursoActual: string) => string | null
+  tieneConflictoHorario: (docenteId: number, dia: string, bloqueId: number, cursoActual: string) => { conflicto: boolean }
 ): ResultadoGeneracion {
   const resultado: ResultadoGeneracion = {
     exito: false,
@@ -88,8 +88,8 @@ export function autoGenerarHorarioCurso(
         }
 
         // Verificar conflicto de horario
-        const conflicto = tieneConflictoHorario(docente.id, dia, bloque.id, cursoKey);
-        if (conflicto) {
+        const resultadoConflicto = tieneConflictoHorario(docente.id, dia, bloque.id, cursoKey);
+        if (resultadoConflicto.conflicto) {
           continue;
         }
 

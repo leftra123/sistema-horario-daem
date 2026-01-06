@@ -25,9 +25,16 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
   const [rut, setRut] = useState('');
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
 
+  const resetForm = () => {
+    setNombre('');
+    setRut('');
+    setAsignaciones([]);
+  };
+
   // Cargar datos si estamos editando
   useEffect(() => {
     if (docenteToEdit) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNombre(docenteToEdit.nombre);
       setRut(docenteToEdit.rut);
       setAsignaciones([...docenteToEdit.asignaciones]);
@@ -35,12 +42,6 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
       resetForm();
     }
   }, [docenteToEdit, open]);
-
-  const resetForm = () => {
-    setNombre('');
-    setRut('');
-    setAsignaciones([]);
-  };
 
   const handleAddAsignacion = () => {
     if (establecimientos.length === 0) {
@@ -74,7 +75,8 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
         updated[index].establecimientoNombre = est.nombre;
       }
     } else {
-      (updated[index] as Record<string, unknown>)[field] = value;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (updated[index] as any)[field] = value;
     }
 
     setAsignaciones(updated);
@@ -243,7 +245,7 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
             {asignaciones.length === 0 ? (
               <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
                 <p className="text-sm">No hay asignaciones</p>
-                <p className="text-xs mt-1">Haz clic en "Agregar Asignación" para comenzar</p>
+                <p className="text-xs mt-1">Haz clic en &quot;Agregar Asignación&quot; para comenzar</p>
               </div>
             ) : (
               <div className="space-y-3">

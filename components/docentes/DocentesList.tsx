@@ -77,7 +77,7 @@ export function DocentesList() {
         <CardContent className="py-20">
           <div className="text-center text-gray-500">
             <p className="text-lg font-medium">No hay docentes registrados</p>
-            <p className="text-sm mt-2">Usa el botón "Agregar Docente" para comenzar</p>
+            <p className="text-sm mt-2">Usa el botón &quot;Agregar Docente&quot; para comenzar</p>
           </div>
         </CardContent>
       </Card>

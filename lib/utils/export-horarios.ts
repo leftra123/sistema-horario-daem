@@ -402,6 +402,7 @@ export function exportarHorarioDocentePDF(
   doc.setTextColor(0, 0, 0);
 
   // Recolectar datos de bloques con asignaturas
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const bloquesAsignados = new Map<string, { curso: string; asignatura: any }>();
   Object.entries(horarios).forEach(([cursoKey, horarioCurso]) => {
     Object.entries(horarioCurso).forEach(([bloqueKey, bloqueData]) => {

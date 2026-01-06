@@ -104,7 +104,7 @@ export function GraficosCumplimiento() {
               COLORES_CUMPLIMIENTO.bajo
       }
     ];
-  }, [docentes, establecimientos, horarios]);
+  }, [docentes, establecimientos, horarios, getHorasUsadasDocente]);
 
   // Distribución por cargo
   const datosPorCargo = useMemo(() => {
@@ -156,9 +156,7 @@ export function GraficosCumplimiento() {
               endAngle={-270}
             >
               <RadialBar
-                minAngle={15}
                 background
-                clockWise
                 dataKey="valor"
                 cornerRadius={10}
               />
@@ -196,7 +194,8 @@ export function GraficosCumplimiento() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ nombre, porcentaje }) => `${nombre}: ${porcentaje}%`}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  label={(props: any) => `${props.nombre}: ${props.porcentaje}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="valor"
@@ -236,7 +235,8 @@ export function GraficosCumplimiento() {
                   borderRadius: '8px',
                   fontSize: '12px'
                 }}
-                formatter={(value: number, name: string) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(value: any, name: any) => {
                   const labels: Record<string, string> = {
                     usadas: 'Horas Usadas',
                     disponibles: 'Horas Disponibles'
