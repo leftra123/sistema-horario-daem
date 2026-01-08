@@ -25,19 +25,16 @@ export default function ExplicacionHoras({ docente, establecimientos }: Props) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>📊 Explicación de Horas - {docente.nombre}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Introducción */}
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-            <p className="text-sm text-blue-900">
-              <strong>Ley 20.903 - Carrera Docente (Tabla 2019)</strong>
-            </p>
-            <p className="text-xs text-blue-700 mt-1">
-              Las horas de contrato se distribuyen entre horas lectivas (en aula) y horas no lectivas (preparación, reuniones, administrativas).
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+            <p className="text-sm text-blue-900 font-semibold">
+              📊 Cálculo según Ley 20.903 - Tabla {docente.asignaciones[0]?.proporcion || '65/35'}
             </p>
           </div>
 
@@ -84,44 +81,18 @@ export default function ExplicacionHoras({ docente, establecimientos }: Props) {
 
                 {/* Explicación del cálculo */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-blue-900 mb-2">📐 Cálculo según Tabla 2019:</p>
-                  <div className="font-mono text-xs text-blue-800 space-y-1">
+                  <p className="text-xs font-semibold text-blue-900 mb-2">📐 Resultado:</p>
+                  <div className="font-mono text-xs text-blue-800">
                     <p>
-                      {asig.horasContrato} horas contrato × {porcentajeLectivas}% = <strong>{tablaEntry.horasLectivas}h lectivas</strong>
+                      <strong>{asig.horasContrato}h contrato</strong> →{' '}
+                      <strong className="text-green-700">{tablaEntry.horasLectivas}h lectivas</strong> +{' '}
+                      <strong className="text-orange-700">{tablaEntry.horasNoLectivas}h no lectivas</strong>
                     </p>
-                    <p>
-                      {asig.horasContrato} horas contrato × {porcentajeNoLectivas}% = <strong>{tablaEntry.horasNoLectivas}h no lectivas</strong>
-                    </p>
-                    <p className="border-t border-blue-300 pt-1 mt-2">
-                      Verificación: {tablaEntry.horasLectivas}h + {tablaEntry.horasNoLectivas}h = {asig.horasContrato}h ✓
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      (Según tabla {proporcion}: {porcentajeLectivas}% lectivas / {porcentajeNoLectivas}% no lectivas)
                     </p>
                   </div>
                 </div>
-
-                {/* Desglose si existe */}
-                {asig.desglose && (
-                  <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-purple-900 mb-2">📊 Desglose Detallado:</p>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-purple-700">Plan 110:</span>
-                        <span className="font-bold">{asig.desglose.plan110}h</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-purple-700">Plan 10:</span>
-                        <span className="font-bold">{asig.desglose.plan10}h</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-purple-700">PIE:</span>
-                        <span className="font-bold">{asig.desglose.pie}h</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-purple-700">Codocencia:</span>
-                        <span className="font-bold">{asig.desglose.codocencia}h</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}

@@ -3,7 +3,8 @@ import { persist } from 'zustand/middleware';
 import { Docente, HorarioData, Establecimiento, Asignatura, BloqueHorario, BloqueConfig, BLOQUES_DEFAULT } from '@/types';
 import {
   getHorasUsadasEnBloques,
-  getHorasDisponiblesParaBloques
+  getHorasDisponiblesParaBloques,
+  detectarCicloDesdeCurso
 } from '@/lib/utils/calculos-horas';
 
 import { ESTABLECIMIENTOS_INICIALES } from './datos_iniciales';
@@ -151,6 +152,17 @@ export const useAppStore = create<AppState>()(
           return {
             success: false,
             error: `⚠️ ${docente.nombre} no tiene asignación en este establecimiento`
+          };
+        }
+
+        // 🆕 AUTO-DETECCIÓN: Validar que el ciclo coincida con el curso
+        const cursoNombre = cursoKey.split('-').slice(1).join(' '); // Ej: "3° Básico A"
+        const cicloDetectado = detectarCicloDesdeCurso(cursoNombre);
+
+        if (asignacion.ciclo !== cicloDetectado) {
+          return {
+            success: false,
+            error: `⚠️ ${docente.nombre} tiene asignación de ${asignacion.ciclo} pero este curso (${cursoNombre}) es ${cicloDetectado}. Actualiza la asignación del docente primero.`
           };
         }
 

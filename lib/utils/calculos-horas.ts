@@ -417,3 +417,34 @@ export function generarResumenDocente(docente: Docente): ResumenHorasDocente {
     })),
   };
 }
+
+// ============================================================================
+// AUTO-DETECCIÓN DE CICLO
+// ============================================================================
+
+/**
+ * Detecta automáticamente el ciclo de enseñanza según el nivel del curso
+ *
+ * @param cursoNombre - Nombre del curso (ej: "3° Básico A", "7° Básico B", "2° Medio A")
+ * @returns "Primer Ciclo" si es 1°-4° Básico, "Segundo Ciclo" en caso contrario
+ *
+ * @example
+ * detectarCicloDesdeCurso("3° Básico A") // "Primer Ciclo"
+ * detectarCicloDesdeCurso("7° Básico B") // "Segundo Ciclo"
+ * detectarCicloDesdeCurso("2° Medio A")  // "Segundo Ciclo"
+ */
+export function detectarCicloDesdeCurso(cursoNombre: string): CicloEnsenanza {
+  // Extraer nivel del nombre del curso
+  const match = cursoNombre.match(/(\d+)°\s*(Básico|Medio)/);
+
+  if (!match) return 'Segundo Ciclo'; // Default seguro
+
+  const nivel = parseInt(match[1]);
+  const tipo = match[2]; // "Básico" o "Medio"
+
+  // Media siempre es Segundo Ciclo
+  if (tipo === 'Medio') return 'Segundo Ciclo';
+
+  // Básico: 1-4 = Primer Ciclo, 5-8 = Segundo Ciclo
+  return nivel <= 4 ? 'Primer Ciclo' : 'Segundo Ciclo';
+}

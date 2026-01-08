@@ -221,7 +221,7 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {docenteToEdit ? 'Editar Docente' : 'Agregar Nuevo Docente'}
@@ -472,39 +472,31 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                         Subvenciones asociadas a esta asignación
                         <span className="text-[10px] text-gray-400">(máximo 3)</span>
                       </Label>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-2">
                         {SUBVENCIONES.map(subv => {
                           const seleccionada = asig.subvenciones?.includes(subv.value) || false;
                           return (
-                            <Button
+                            <label
                               key={subv.value}
-                              type="button"
-                              size="sm"
-                              variant={seleccionada ? "default" : "outline"}
-                              onClick={() => toggleSubvencion(idx, subv.value)}
-                              className="text-xs"
-                              style={{
-                                backgroundColor: seleccionada ? subv.color : 'transparent',
-                                borderColor: subv.color,
-                                color: seleccionada ? 'white' : subv.color
-                              }}
+                              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
                             >
-                              {seleccionada && '✓ '}
-                              {subv.value}
-                            </Button>
+                              <input
+                                type="checkbox"
+                                checked={seleccionada}
+                                onChange={() => toggleSubvencion(idx, subv.value)}
+                                className="w-4 h-4 rounded cursor-pointer"
+                              />
+                              <span className="flex items-center gap-2 flex-1">
+                                <span
+                                  className="w-3 h-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: subv.color }}
+                                ></span>
+                                <span className="text-xs">{subv.label}</span>
+                              </span>
+                            </label>
                           );
                         })}
                       </div>
-                      {asig.subvenciones && asig.subvenciones.length > 0 && (
-                        <div className="bg-blue-50 border border-blue-200 rounded p-2 mt-2">
-                          <p className="text-xs text-blue-700">
-                            <strong>Subvenciones activas:</strong> {asig.subvenciones.map(s => {
-                              const subv = SUBVENCIONES.find(sv => sv.value === s);
-                              return subv?.label || s;
-                            }).join(', ')}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}
