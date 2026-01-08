@@ -12,7 +12,7 @@ export default function DocentesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-gray-50 to-emerald-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1600px] mx-auto space-y-6">
 
         {/* Header Mejorado */}
         <div className="bg-gradient-to-r from-emerald-600 to-blue-600 text-white p-8 rounded-2xl shadow-xl">

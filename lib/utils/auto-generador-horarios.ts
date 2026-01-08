@@ -1,5 +1,5 @@
 import { Docente, BloqueConfig, Asignatura, HorarioData, Establecimiento } from '@/types';
-import { getHorasLectivasDocente } from './calculos-horas';
+import { getHorasLectivasDocente, getHorasUsadasEnBloques, tieneConflictoHorario as tieneConflictoHorarioUtil } from './calculos-horas';
 
 interface ResultadoGeneracion {
   exito: boolean;
@@ -22,9 +22,7 @@ export function autoGenerarHorarioCurso(
   asignaturas: Asignatura[],
   bloques: BloqueConfig[],
   horarios: HorarioData,
-  establecimientos: Establecimiento[],
-  getHorasUsadasDocente: (docenteId: number) => number,
-  tieneConflictoHorario: (docenteId: number, dia: string, bloqueId: number, cursoActual: string) => { conflicto: boolean }
+  establecimientos: Establecimiento[]
 ): ResultadoGeneracion {
   const resultado: ResultadoGeneracion = {
     exito: false,
@@ -40,7 +38,7 @@ export function autoGenerarHorarioCurso(
     if (!tieneAsignacion) return false;
 
     const horasLectivas = getHorasLectivasDocente(d, establecimientos);
-    const horasUsadas = getHorasUsadasDocente(d.id);
+    const horasUsadas = getHorasUsadasEnBloques(d.id, horarios);
     return horasLectivas > horasUsadas;
   });
 
@@ -76,7 +74,7 @@ export function autoGenerarHorarioCurso(
 
         // Verificar horas disponibles
         const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
-        const horasUsadas = getHorasUsadasDocente(docente.id);
+        const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
         const disponibles = horasLectivas - horasUsadas;
 
         if (disponibles <= 0) continue;
@@ -88,8 +86,8 @@ export function autoGenerarHorarioCurso(
         }
 
         // Verificar conflicto de horario
-        const resultadoConflicto = tieneConflictoHorario(docente.id, dia, bloque.id, cursoKey);
-        if (resultadoConflicto.conflicto) {
+        const resultadoConflicto = tieneConflictoHorarioUtil(docente.id, dia, bloque.id, cursoKey, horarios);
+        if (resultadoConflicto) {
           continue;
         }
 

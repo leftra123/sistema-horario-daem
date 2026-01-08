@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Docente, Asignacion, CARGOS, DIAS, SUBVENCIONES, Subvencion } from '@/types';
+import { Docente, Asignacion, CARGOS, DIAS, SUBVENCIONES, Subvencion, TIPOS_ASIGNACION, CICLOS_ENSENANZA } from '@/types';
 import { validarRut, formatearRut } from '@/lib/utils/validaciones';
+import { getProporcionalidad, getHorasLectivasDeTabla, calcularHorasNoLectivas } from '@/lib/utils/calculos-horas';
 import { toast } from 'sonner';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, AlertCircle } from 'lucide-react';
 
 interface DocenteFormModalProps {
   open: boolean;
@@ -49,12 +50,25 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
       return;
     }
 
+    const est = establecimientos[0];
+    const ciclo = 'Segundo Ciclo';
+    const horasContrato = 10;
+    const proporcion = getProporcionalidad(ciclo, est.prioritarios);
+    const horasLectivas = getHorasLectivasDeTabla(horasContrato, proporcion);
+    const horasNoLectivas = calcularHorasNoLectivas(horasContrato, horasLectivas);
+
     const nuevaAsignacion: Asignacion = {
-      establecimientoId: establecimientos[0].id,
-      establecimientoNombre: establecimientos[0].nombre,
+      id: `${Date.now()}-${Math.random()}`,
+      establecimientoId: est.id,
+      establecimientoNombre: est.nombre,
       cargo: CARGOS[0],
-      horasContrato: 10,
-      tipo: 'Titular',
+      horasContrato,
+      titularidad: 'Titular',
+      tipoAsignacion: 'Normal',
+      ciclo,
+      proporcion,
+      horasLectivas,
+      horasNoLectivas
     };
 
     setAsignaciones([...asignaciones, nuevaAsignacion]);
@@ -73,10 +87,27 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
       if (est) {
         updated[index].establecimientoId = estId;
         updated[index].establecimientoNombre = est.nombre;
+        // Recalcular proporcion basado en el nuevo establecimiento
+        const proporcion = getProporcionalidad(updated[index].ciclo, est.prioritarios);
+        updated[index].proporcion = proporcion;
+        updated[index].horasLectivas = getHorasLectivasDeTabla(updated[index].horasContrato, proporcion);
+        updated[index].horasNoLectivas = calcularHorasNoLectivas(updated[index].horasContrato, updated[index].horasLectivas);
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (updated[index] as any)[field] = value;
+
+      // Recalcular valores derivados cuando cambian campos relevantes
+      if (field === 'horasContrato' || field === 'ciclo' || field === 'tipoAsignacion') {
+        const asig = updated[index];
+        const est = establecimientos.find(e => e.id === asig.establecimientoId);
+        if (est) {
+          const proporcion = getProporcionalidad(asig.ciclo, est.prioritarios);
+          updated[index].proporcion = proporcion;
+          updated[index].horasLectivas = getHorasLectivasDeTabla(asig.horasContrato, proporcion);
+          updated[index].horasNoLectivas = calcularHorasNoLectivas(asig.horasContrato, updated[index].horasLectivas);
+        }
+      }
     }
 
     setAsignaciones(updated);
@@ -306,8 +337,8 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                       <div className="space-y-2">
                         <Label>Tipo</Label>
                         <Select
-                          value={asig.tipo}
-                          onValueChange={(value) => handleUpdateAsignacion(idx, 'tipo', value)}
+                          value={asig.titularidad}
+                          onValueChange={(value) => handleUpdateAsignacion(idx, 'titularidad', value)}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -329,6 +360,77 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                           onChange={(e) => handleUpdateAsignacion(idx, 'horasContrato', parseInt(e.target.value) || 0)}
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <Label>Tipo de Asignación</Label>
+                        <Select
+                          value={asig.tipoAsignacion}
+                          onValueChange={(value) => handleUpdateAsignacion(idx, 'tipoAsignacion', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIPOS_ASIGNACION.map(tipo => (
+                              <SelectItem key={tipo.value} value={tipo.value}>
+                                {tipo.label}
+                                {!tipo.permiteBloque && " 🚫"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Ciclo de Enseñanza</Label>
+                        <Select
+                          value={asig.ciclo}
+                          onValueChange={(value) => handleUpdateAsignacion(idx, 'ciclo', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CICLOS_ENSENANZA.map(c => (
+                              <SelectItem key={c.value} value={c.value}>
+                                {c.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Resumen calculado automáticamente */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                      <p className="text-xs font-semibold text-blue-900 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Resumen Automático (Ley 20.903)
+                      </p>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <span className="text-gray-600">Proporción:</span>{' '}
+                          <strong className="text-blue-700">{asig.proporcion}</strong>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Horas Lectivas:</span>{' '}
+                          <strong className="text-green-700">{asig.horasLectivas}h</strong>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Horas No Lectivas:</span>{' '}
+                          <strong className="text-orange-700">{asig.horasNoLectivas}h</strong>
+                        </div>
+                      </div>
+                      {asig.tipoAsignacion === "PIE" && (
+                        <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded p-2 mt-2">
+                          ⚠️ <strong>PIE</strong> es adicional y NO suma en el contrato base
+                        </p>
+                      )}
+                      {asig.tipoAsignacion === "Directiva" && (
+                        <p className="text-xs text-gray-600 bg-gray-50 border border-gray-300 rounded p-2 mt-2">
+                          🚫 <strong>Directiva</strong> NO permite asignación de bloques (solo administrativo)
+                        </p>
+                      )}
                     </div>
 
                     {/* Días Bloqueados */}

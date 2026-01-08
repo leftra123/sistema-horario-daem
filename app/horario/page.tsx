@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, Trash2, FileSpreadsheet, FileDown, Wand2, Calendar, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { getHorasLectivasDocente } from '@/lib/utils/calculos-horas';
+import { getHorasLectivasDocente, getHorasUsadasEnBloques, tieneConflictoHorario } from '@/lib/utils/calculos-horas';
 import {
   exportarHorarioCursoExcel,
   exportarHorarioCursoPDF
@@ -127,9 +127,7 @@ export default function HorarioPage() {
     horarios,
     asignarBloque,
     removeBloque,
-    getHorasUsadasDocente,
-    getBloquesPorEstablecimiento,
-    tieneConflictoHorario
+    getBloquesPorEstablecimiento
   } = useAppStore();
 
   const [establecimientoSel, setEstablecimientoSel] = useState<string>('');
@@ -192,9 +190,9 @@ export default function HorarioPage() {
   const getHorasDisponibles = (docenteId: number) => {
     const docente = docentes.find(d => d.id === docenteId);
     if (!docente) return 0;
-    
+
     const totalHoras = docente.asignaciones.reduce((sum, a) => sum + a.horasContrato, 0);
-    const horasUsadas = getHorasUsadasDocente(docenteId);
+    const horasUsadas = getHorasUsadasEnBloques(docenteId, horarios);
     return totalHoras - horasUsadas;
   };
 
@@ -256,9 +254,7 @@ export default function HorarioPage() {
       asignaturasDelEstablecimiento,
       bloques,
       horarios,
-      establecimientos,
-      getHorasUsadasDocente,
-      tieneConflictoHorario
+      establecimientos
     );
 
     // Aplicar asignaciones
@@ -502,15 +498,16 @@ export default function HorarioPage() {
 
                                     // Verificar conflicto de horario (solo si no está bloqueado y no hay bloque ya asignado)
                                     if (!diaBloqueado && !bloque) {
-                                      const resultadoConflicto = tieneConflictoHorario(
+                                      const cursoConflicto = tieneConflictoHorario(
                                         parseInt(docenteSel),
                                         d,
                                         b.id,
-                                        horarioKey
+                                        horarioKey,
+                                        horarios
                                       );
 
-                                      if (resultadoConflicto.conflicto) {
-                                        conflictoInfo = resultadoConflicto;
+                                      if (cursoConflicto) {
+                                        conflictoInfo = { conflicto: true, cursoKey: cursoConflicto };
                                       }
                                     }
                                   }
@@ -631,9 +628,9 @@ export default function HorarioPage() {
                                             
                                             <div className="flex items-center gap-2 mt-1">
                                                 <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                                    <div 
+                                                    <div
                                                         className={`h-full rounded-full ${sinHoras ? 'bg-red-400' : 'bg-emerald-400'}`}
-                                                        style={{ width: `${Math.min(100, (getHorasUsadasDocente(d.id) / (d.asignaciones.reduce((s,a)=>s+a.horasContrato,0) || 1)) * 100)}%` }}
+                                                        style={{ width: `${Math.min(100, (getHorasUsadasEnBloques(d.id, horarios) / (d.asignaciones.reduce((s,a)=>s+a.horasContrato,0) || 1)) * 100)}%` }}
                                                     />
                                                 </div>
                                                 <span className={`text-[10px] whitespace-nowrap ${sinHoras ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
@@ -654,7 +651,7 @@ export default function HorarioPage() {
                   if (!docente) return null;
 
                   const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
-                  const horasUsadas = getHorasUsadasDocente(parseInt(docenteSel));
+                  const horasUsadas = getHorasUsadasEnBloques(parseInt(docenteSel), horarios);
                   const disponibles = Math.max(0, horasLectivas - horasUsadas);
                   const porcentajeUsado = horasLectivas > 0 ? (horasUsadas / horasLectivas) * 100 : 0;
 

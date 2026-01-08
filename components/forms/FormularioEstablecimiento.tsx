@@ -89,7 +89,7 @@ export default function FormularioEstablecimiento({
       setNombre(establecimientoToEdit.nombre);
       setNiveles(establecimientoToEdit.niveles);
       setPrioritarios(establecimientoToEdit.prioritarios);
-      setProporcion(establecimientoToEdit.proporcion || '60/40');
+      setProporcion(establecimientoToEdit.prioritarios ? '60/40' : '65/35'); // Calculado desde prioritarios
       setSecciones(establecimientoToEdit.secciones || ['A']);
 
       // Cargar asignaturas personalizadas si existen
@@ -214,7 +214,6 @@ export default function FormularioEstablecimiento({
         nombre: nombre.trim(),
         niveles,
         prioritarios,
-        proporcion,
         secciones,
         asignaturas: asignaturasSeleccionadas.length > 0 ? asignaturasSeleccionadas : undefined,
         configuracionHorario
@@ -231,7 +230,6 @@ export default function FormularioEstablecimiento({
         nombre: nombre.trim(),
         niveles,
         prioritarios,
-        proporcion,
         secciones,
         asignaturas: asignaturasSeleccionadas.length > 0 ? asignaturasSeleccionadas : undefined,
         configuracionHorario

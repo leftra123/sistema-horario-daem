@@ -44,7 +44,7 @@ export default function ExplicacionHoras({ docente, establecimientos }: Props) {
           {/* Desglose por asignación */}
           {docente.asignaciones.map((asig, idx) => {
             const est = establecimientos.find(e => e.id === asig.establecimientoId);
-            const proporcion = est?.proporcion || '60/40';
+            const proporcion = est?.prioritarios ? '60/40' : '65/35';
             const tablaEntry = getTablaEntry(proporcion, asig.horasContrato);
             const porcentajeLectivas = proporcion === '65/35' ? 65 : 60;
             const porcentajeNoLectivas = proporcion === '65/35' ? 35 : 40;
@@ -142,7 +142,7 @@ export default function ExplicacionHoras({ docente, establecimientos }: Props) {
                   <p className="text-2xl font-bold text-green-700">
                     {docente.asignaciones.reduce((sum, a) => {
                       const est = establecimientos.find(e => e.id === a.establecimientoId);
-                      const proporcion = est?.proporcion || '60/40';
+                      const proporcion = est?.prioritarios ? '60/40' : '65/35';
                       const entry = getTablaEntry(proporcion, a.horasContrato);
                       return sum + entry.horasLectivas;
                     }, 0)}h
@@ -153,7 +153,7 @@ export default function ExplicacionHoras({ docente, establecimientos }: Props) {
                   <p className="text-2xl font-bold text-orange-700">
                     {docente.asignaciones.reduce((sum, a) => {
                       const est = establecimientos.find(e => e.id === a.establecimientoId);
-                      const proporcion = est?.proporcion || '60/40';
+                      const proporcion = est?.prioritarios ? '60/40' : '65/35';
                       const entry = getTablaEntry(proporcion, a.horasContrato);
                       return sum + entry.horasNoLectivas;
                     }, 0)}h

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAppStore } from '@/lib/store';
-import { getHorasLectivasDocente } from '@/lib/utils/calculos-horas';
+import { getHorasLectivasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
 import {
   BarChart,
   Bar,
@@ -34,7 +34,7 @@ const COLORES_SUBVENCIONES = {
 };
 
 export function GraficosCumplimiento() {
-  const { establecimientos, docentes, horarios, getHorasUsadasDocente } = useAppStore();
+  const { establecimientos, docentes, horarios } = useAppStore();
 
   // Datos de cumplimiento por establecimiento
   const datosPorEstablecimiento = useMemo(() => {
@@ -48,7 +48,7 @@ export function GraficosCumplimiento() {
       }, 0);
 
       const totalUsadas = docentesEst.reduce((sum, d) => {
-        return sum + getHorasUsadasDocente(d.id);
+        return sum + getHorasUsadasEnBloques(d.id, horarios);
       }, 0);
 
       const porcentaje = totalLectivas > 0 ? (totalUsadas / totalLectivas) * 100 : 0;
@@ -62,7 +62,7 @@ export function GraficosCumplimiento() {
         porcentaje: Math.round(porcentaje)
       };
     });
-  }, [establecimientos, docentes, horarios, getHorasUsadasDocente]);
+  }, [establecimientos, docentes, horarios]);
 
   // Datos de distribución de subvenciones
   const datosSubvenciones = useMemo(() => {
@@ -90,7 +90,7 @@ export function GraficosCumplimiento() {
     }, 0);
 
     const totalUsadas = docentes.reduce((sum, d) => {
-      return sum + getHorasUsadasDocente(d.id);
+      return sum + getHorasUsadasEnBloques(d.id, horarios);
     }, 0);
 
     const porcentaje = totalLectivas > 0 ? (totalUsadas / totalLectivas) * 100 : 0;
@@ -104,7 +104,7 @@ export function GraficosCumplimiento() {
               COLORES_CUMPLIMIENTO.bajo
       }
     ];
-  }, [docentes, establecimientos, horarios, getHorasUsadasDocente]);
+  }, [docentes, establecimientos, horarios]);
 
   // Distribución por cargo
   const datosPorCargo = useMemo(() => {

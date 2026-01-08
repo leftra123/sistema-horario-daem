@@ -12,7 +12,7 @@ import { DocenteFormModal } from './DocenteFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import ExplicacionHoras from './ExplicacionHoras';
 import VistaHorarioDocente from './VistaHorarioDocente';
-import { getHorasLectivasDocente } from '@/lib/utils/calculos-horas';
+import { getHorasLectivasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
 import {
   exportarHorarioDocenteExcel,
   exportarHorarioDocentePDF
@@ -21,7 +21,7 @@ import { Docente, SUBVENCIONES } from '@/types';
 import { toast } from 'sonner';
 
 export function DocentesList() {
-  const { docentes, establecimientos, horarios, removeDocente, getHorasUsadasDocente, getBloquesPorEstablecimiento } = useAppStore();
+  const { docentes, establecimientos, horarios, removeDocente, getBloquesPorEstablecimiento } = useAppStore();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingDocente, setEditingDocente] = useState<Docente | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -121,7 +121,7 @@ export function DocentesList() {
             <TableBody>
               {docentesFiltrados.map((docente) => {
                 const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
-                const horasUsadas = getHorasUsadasDocente(docente.id);
+                const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
                 const horasDisponibles = Math.max(0, horasLectivas - horasUsadas);
                 const totalHoras = docente.asignaciones.reduce((sum, a) => sum + a.horasContrato, 0);
                 const porcentajeUsado = horasLectivas > 0 ? (horasUsadas / horasLectivas) * 100 : 0;
@@ -256,7 +256,7 @@ export function DocentesList() {
                                       <p className="font-medium text-sm">{est?.nombre || 'Establecimiento desconocido'}</p>
                                       <div className="flex gap-2 mt-1 flex-wrap">
                                         <Badge variant="outline" className="text-xs">{asig.cargo}</Badge>
-                                        <Badge variant="secondary" className="text-xs">{asig.tipo}</Badge>
+                                        <Badge variant="secondary" className="text-xs">{asig.titularidad}</Badge>
                                       </div>
                                       {asig.subvenciones && asig.subvenciones.length > 0 && (
                                         <div className="flex gap-1 mt-2 flex-wrap">
@@ -321,8 +321,8 @@ export function DocentesList() {
         description={
           docenteToDelete
             ? `¿Estás seguro de eliminar a ${docenteToDelete.nombre}? ${
-                getHorasUsadasDocente(docenteToDelete.id) > 0
-                  ? `⚠️ Este docente tiene ${getHorasUsadasDocente(docenteToDelete.id)} horas asignadas en horarios que también se eliminarán.`
+                getHorasUsadasEnBloques(docenteToDelete.id, horarios) > 0
+                  ? `⚠️ Este docente tiene ${getHorasUsadasEnBloques(docenteToDelete.id, horarios)} horas asignadas en horarios que también se eliminarán.`
                   : 'Esta acción no se puede deshacer.'
               }`
             : ''

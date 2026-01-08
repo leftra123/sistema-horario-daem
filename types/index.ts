@@ -4,8 +4,8 @@ export interface Establecimiento {
   id: number;
   nombre: string;
   niveles: string; // "1-8" o "7-12"
-  prioritarios: boolean;
-  proporcion?: string; // "60/40"
+  prioritarios: boolean; // 80%+ alumnos prioritarios (afecta tabla 60/40 vs 65/35)
+  // NOTA: proporcion se movió a Asignacion (depende del ciclo de enseñanza)
   secciones?: string[]; // ["A", "B"]
 
   // Asignaturas personalizadas del establecimiento
@@ -46,6 +46,28 @@ export const SUBVENCIONES: { value: Subvencion; label: string; color: string }[]
   { value: "SN", label: "SN (Subvención Normal)", color: "#8b5cf6" }
 ];
 
+// NUEVO: Tipo de asignación según Ley 20.903
+export type TipoAsignacion = "Normal" | "SEP" | "EIB" | "Directiva" | "PIE";
+
+export const TIPOS_ASIGNACION: { value: TipoAsignacion; label: string; color: string; permiteBloque: boolean }[] = [
+  { value: "Normal", label: "Subvención Normal", color: "#8b5cf6", permiteBloque: true },
+  { value: "SEP", label: "SEP (Subvención Escolar Preferencial)", color: "#10b981", permiteBloque: true },
+  { value: "EIB", label: "EIB (Educación Intercultural Bilingüe)", color: "#eab308", permiteBloque: true },
+  { value: "Directiva", label: "Directiva (No Lectivas)", color: "#64748b", permiteBloque: false },
+  { value: "PIE", label: "PIE (Adicional - No suma en contrato)", color: "#3b82f6", permiteBloque: false }
+];
+
+// Tipo de ciclo de enseñanza (afecta proporción lectiva/no lectiva)
+export type CicloEnsenanza = "Primer Ciclo" | "Segundo Ciclo";
+
+export const CICLOS_ENSENANZA: { value: CicloEnsenanza; label: string }[] = [
+  { value: "Primer Ciclo", label: "Primer Ciclo (1º-4º básico)" },
+  { value: "Segundo Ciclo", label: "Segundo Ciclo (5º-8º básico, media)" }
+];
+
+// Tipo de proporción lectiva/no lectiva
+export type Proporcion = "60/40" | "65/35";
+
 export interface Asignatura {
   id: number;
   codigo: string;
@@ -55,14 +77,34 @@ export interface Asignatura {
 }
 
 export interface Asignacion {
+  id: string;                      // Identificador único de la asignación
   establecimientoId: number;
   establecimientoNombre: string;
-  cargo: Cargo;           // Viene de columna "FUNCION" del Excel
-  horasContrato: number;  // Viene de columna "HRS"
-  tipo: string;           // Viene de columna "TITULARIDAD" (Titular/Contrata)
+  cargo: Cargo;                    // Viene de columna "FUNCION" del Excel
+  horasContrato: number;           // Jornada semanal total (Ej: 44 horas)
+  titularidad: string;             // Titular/Contrata (antes "tipo")
 
-  // Modelo detallado nuevo (opcional)
-  ciclo?: "primero" | "segundo" | "media";
+  // ✅ NUEVO: Tipo de asignación según Ley 20.903
+  tipoAsignacion: TipoAsignacion;  // "Normal" | "SEP" | "EIB" | "Directiva" | "PIE"
+
+  // ✅ NUEVO: Ciclo de enseñanza (obligatorio)
+  ciclo: CicloEnsenanza;           // "Primer Ciclo" | "Segundo Ciclo"
+
+  // ✅ NUEVO: Proporción lectiva/no lectiva (derivada del ciclo + establecimiento)
+  proporcion: Proporcion;          // "60/40" | "65/35"
+
+  // ✅ NUEVO: Horas lectivas (calculadas según tabla normativa Ley 20.903)
+  // Se obtiene de getHorasLectivasDeTabla(horasContrato, proporcion)
+  horasLectivas: number;           // Horas frente a alumnos (READ-ONLY)
+
+  // ✅ NUEVO: Horas no lectivas (calculadas)
+  // Fórmula: horasNoLectivas = horasContrato - horasLectivas
+  horasNoLectivas: number;         // Horas administrativas/planificación (READ-ONLY)
+
+  // Bloques asignados (SOLO para Normal/SEP/EIB - NO para Directiva/PIE)
+  bloquesAsignados?: string[];     // IDs de bloques ["1-Lunes-1", "1-Martes-2"]
+
+  // Modelo detallado (opcional - para compatibilidad con importación)
   desglose?: {
     plan110: number;
     plan10: number;
@@ -71,10 +113,10 @@ export interface Asignacion {
   };
 
   // Días bloqueados (docente trabaja en otra escuela esos días)
-  diasBloqueados?: string[];  // ["Lunes", "Martes"] = NO disponible estos días
+  diasBloqueados?: string[];       // ["Lunes", "Martes"] = NO disponible estos días
 
-  // Subvenciones (para historial y cumplimiento)
-  subvenciones?: ("PIE" | "SEP" | "SN")[];  // Máximo 3 subvenciones
+  // Subvenciones (DEPRECADO - usar tipoAsignacion)
+  subvenciones?: ("PIE" | "SEP" | "SN")[];
 }
 
 export interface Docente {

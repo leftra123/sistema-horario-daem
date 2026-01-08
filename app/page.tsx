@@ -16,11 +16,11 @@ import {
   Clock,
   CheckCircle2
 } from 'lucide-react';
-import { getHorasLectivasDocente } from '@/lib/utils/calculos-horas';
+import { getHorasLectivasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
 
 export default function Home() {
   const router = useRouter();
-  const { docentes, establecimientos, horarios, getHorasUsadasDocente } = useAppStore();
+  const { docentes, establecimientos, horarios } = useAppStore();
 
   // Estadísticas rápidas
   const totalDocentes = docentes.length;
@@ -34,7 +34,7 @@ export default function Home() {
   );
 
   const totalHorasUsadas = docentes.reduce((sum, d) =>
-    sum + getHorasUsadasDocente(d.id), 0
+    sum + getHorasUsadasEnBloques(d.id, horarios), 0
   );
 
   const porcentajeAsignado = totalHorasLectivas > 0
@@ -89,7 +89,7 @@ export default function Home() {
           }}/>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6 py-12 md:py-16">
+        <div className="relative max-w-[1600px] mx-auto px-6 py-12 md:py-16">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             {/* Texto Principal */}
             <div className="flex-1 text-center md:text-left">
@@ -138,7 +138,7 @@ export default function Home() {
       </div>
 
       {/* Stats Bar Mejorado */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-[1600px] mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white transform hover:scale-105 transition-transform">
             <CardContent className="pt-6">
@@ -199,7 +199,7 @@ export default function Home() {
       </div>
 
       {/* Main Menu Mejorado */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="max-w-[1600px] mx-auto px-6 py-12">
         <div className="mb-10 text-center">
           <h2 className="text-3xl font-bold text-gray-800 mb-3">¿Qué deseas hacer?</h2>
           <p className="text-lg text-gray-600">Selecciona un módulo para comenzar a trabajar</p>
@@ -258,7 +258,7 @@ export default function Home() {
       </div>
 
       {/* Quick Info Section */}
-      <div className="max-w-7xl mx-auto px-6 pb-12">
+      <div className="max-w-[1600px] mx-auto px-6 pb-12">
         <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-purple-50">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -342,7 +342,7 @@ export default function Home() {
 
       {/* Footer Mejorado */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-[1600px] mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="relative w-12 h-12">

@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Docente, HorarioData, Establecimiento, Asignatura, BloqueHorario, BloqueConfig, BLOQUES_DEFAULT } from '@/types';
+import {
+  getHorasUsadasEnBloques,
+  getHorasDisponiblesParaBloques
+} from '@/lib/utils/calculos-horas';
 
 import { ESTABLECIMIENTOS_INICIALES } from './datos_iniciales';
 
@@ -38,13 +42,7 @@ interface AppState {
   resetBloquesDefault: (estId: number) => void;
 
   // Utilidades
-  getHorasUsadasDocente: (docenteId: number) => number;
-  tieneConflictoHorario: (docenteId: number, dia: string, bloqueId: number, cursoActual: string) => {
-    conflicto: boolean;
-    cursoKey?: string;
-    establecimientoId?: number;
-    establecimientoNombre?: string;
-  };
+  // NOTA: getHorasUsadasDocente y tieneConflictoHorario se movieron a calculos-horas.ts
   repararDatosCorruptos: () => { reparados: number; eliminados: number };
 }
 
@@ -144,42 +142,71 @@ export const useAppStore = create<AppState>()(
           return { success: false, error: 'Docente no encontrado' };
         }
 
-        // NUEVO: Verificar día bloqueado
+        // Extraer establecimiento ID del cursoKey
         const [estIdStr] = cursoKey.split('-');
         const estId = parseInt(estIdStr);
         const asignacion = docente.asignaciones.find(a => a.establecimientoId === estId);
 
-        if (asignacion?.diasBloqueados?.includes(dia)) {
+        if (!asignacion) {
+          return {
+            success: false,
+            error: `⚠️ ${docente.nombre} no tiene asignación en este establecimiento`
+          };
+        }
+
+        // ✅ VALIDACIÓN 1: Verificar que Directiva no intente asignar bloques
+        if (asignacion.tipoAsignacion === "Directiva") {
+          return {
+            success: false,
+            error: `🚫 Las horas Directiva NO pueden asignarse en bloques. Son horas administrativas (no lectivas).`
+          };
+        }
+
+        // ✅ VALIDACIÓN 2: Verificar que PIE no intente asignar bloques
+        if (asignacion.tipoAsignacion === "PIE") {
+          return {
+            success: false,
+            error: `🚫 Las horas PIE NO pueden asignarse en bloques. Son horas adicionales fuera del horario regular.`
+          };
+        }
+
+        // ✅ VALIDACIÓN 3: Verificar día bloqueado
+        if (asignacion.diasBloqueados?.includes(dia)) {
           return {
             success: false,
             error: `🚫 ${docente.nombre} NO está disponible los ${dia} en este establecimiento`
           };
         }
 
-        // Verificar conflicto de horario
-        const resultado = state.tieneConflictoHorario(docenteId, dia, bloqueId, cursoKey);
-        if (resultado.conflicto) {
-          const [, nivel, seccion] = resultado.cursoKey?.split('-') || ['', '', ''];
-          const cursoConflicto = `${nivel} ${seccion}`;
-          return {
-            success: false,
-            error: `⚠️ ${docente.nombre} ya tiene clase en este horario en ${cursoConflicto}${resultado.establecimientoNombre ? ` (${resultado.establecimientoNombre})` : ''}`
-          };
-        }
-
-        // Verificar horas disponibles
-        const horasUsadas = state.getHorasUsadasDocente(docenteId);
-        const totalHoras = docente.asignaciones.reduce((sum, a) => sum + a.horasContrato, 0);
-
-        if (horasUsadas >= totalHoras) {
-          return {
-            success: false,
-            error: `⚠️ ${docente.nombre} no tiene horas disponibles (${horasUsadas}/${totalHoras}h)`
-          };
-        }
-
-        // Asignar el bloque
+        // ✅ VALIDACIÓN 4: Verificar conflicto de horario
         const bloqueKey = `${dia}-${bloqueId}`;
+        for (const [cursoKeyCheck, horarioCurso] of Object.entries(state.horarios)) {
+          if (cursoKeyCheck === cursoKey) continue;
+
+          const bloque = horarioCurso[bloqueKey];
+          if (bloque && bloque.docenteId === docenteId) {
+            const [, nivel, seccion] = cursoKeyCheck.split('-');
+            const [estIdConflicto] = cursoKeyCheck.split('-');
+            const establecimiento = state.establecimientos.find(e => e.id === parseInt(estIdConflicto));
+            return {
+              success: false,
+              error: `⚠️ ${docente.nombre} ya tiene clase en este horario en ${nivel} ${seccion}${establecimiento ? ` (${establecimiento.nombre})` : ''}`
+            };
+          }
+        }
+
+        // ✅ VALIDACIÓN 5: Verificar horas disponibles (CORREGIDO - usa horasLectivas)
+        const horasLectivasDisponibles = getHorasDisponiblesParaBloques(asignacion);
+        const horasUsadas = getHorasUsadasEnBloques(docenteId, state.horarios);
+
+        if (horasUsadas >= horasLectivasDisponibles) {
+          return {
+            success: false,
+            error: `⚠️ ${docente.nombre} no tiene horas lectivas disponibles (${horasUsadas}/${horasLectivasDisponibles}h)`
+          };
+        }
+
+        // ✅ Asignar el bloque
         set((state) => ({
           horarios: {
             ...state.horarios,
@@ -229,47 +256,8 @@ export const useAppStore = create<AppState>()(
       })),
 
       // UTILIDADES
-      getHorasUsadasDocente: (docenteId) => {
-        const state = get();
-        let horasUsadas = 0;
-        Object.values(state.horarios).forEach(horarioCurso => {
-          Object.values(horarioCurso).forEach(bloque => {
-            if (bloque.docenteId === docenteId) {
-              horasUsadas++;
-            }
-          });
-        });
-        return horasUsadas;
-      },
-
-      tieneConflictoHorario: (docenteId, dia, bloqueId, cursoActual) => {
-        const state = get();
-        const bloqueKey = `${dia}-${bloqueId}`;
-
-        for (const [cursoKey, horarioCurso] of Object.entries(state.horarios)) {
-          if (cursoKey === cursoActual) {
-            continue; // Ignorar el curso actual
-          }
-
-          const bloque = horarioCurso[bloqueKey];
-
-          if (bloque && bloque.docenteId === docenteId) {
-            // Extraer establecimientoId del cursoKey (formato: "estId-nivel-seccion")
-            const [estIdStr] = cursoKey.split('-');
-            const estId = parseInt(estIdStr);
-            const establecimiento = state.establecimientos.find(e => e.id === estId);
-
-            return {
-              conflicto: true,
-              cursoKey,
-              establecimientoId: estId,
-              establecimientoNombre: establecimiento?.nombre || 'Establecimiento desconocido'
-            };
-          }
-        }
-
-        return { conflicto: false }; // No hay conflicto
-      },
+      // NOTA: getHorasUsadasDocente y tieneConflictoHorario se movieron a calculos-horas.ts
+      // Usar: import { getHorasUsadasEnBloques, tieneConflictoHorario } from '@/lib/utils/calculos-horas'
 
       repararDatosCorruptos: () => {
         const state = get();

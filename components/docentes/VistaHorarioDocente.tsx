@@ -7,14 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock } from 'lucide-react';
 import { Docente, BloqueConfig, HorarioData, DIAS } from '@/types';
 import { useAppStore } from '@/lib/store';
-import { getHorasLectivasDocente } from '@/lib/utils/calculos-horas';
+import { getHorasLectivasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
 
 interface VistaHorarioDocenteProps {
   docente: Docente;
 }
 
 export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProps) {
-  const { horarios, establecimientos, getHorasUsadasDocente, getBloquesPorEstablecimiento } = useAppStore();
+  const { horarios, establecimientos, getBloquesPorEstablecimiento } = useAppStore();
 
   // Obtener el establecimiento principal del docente (primera asignación)
   const establecimientoPrincipal = useMemo(() => {
@@ -37,7 +37,7 @@ export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProp
   // Calcular horas lectivas y no lectivas
   const estadisticas = useMemo(() => {
     const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
-    const horasUsadas = getHorasUsadasDocente(docente.id);
+    const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
     const horasNoLectivas = docente.asignaciones.reduce((sum, a) => sum + a.horasContrato, 0) - horasLectivas;
 
     return {
@@ -46,7 +46,7 @@ export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProp
       horasNoLectivas,
       horasLibresLectivas: horasLectivas - horasUsadas
     };
-  }, [docente, establecimientos, getHorasUsadasDocente]);
+  }, [docente, establecimientos, horarios]);
 
   // Encontrar todos los bloques donde está asignado el docente
   const bloquesAsignados = useMemo(() => {
@@ -259,7 +259,7 @@ export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProp
             <strong>ℹ️ Información:</strong> Este horario muestra todas las clases asignadas al docente.
             Las horas no lectivas ({estadisticas.horasNoLectivas}h) se distribuyen automáticamente
             para preparación de clases, reuniones y tareas administrativas según la proporción{' '}
-            {establecimientoPrincipal.proporcion || '60/40'} del establecimiento.
+            {establecimientoPrincipal.prioritarios ? '60/40' : '65/35'} del establecimiento.
           </p>
         </div>
       </DialogContent>

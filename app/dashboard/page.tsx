@@ -7,18 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import FormularioDocente from '@/components/forms/FormularioDocente';
 import FormularioEstablecimiento from '@/components/forms/FormularioEstablecimiento';
 import { GraficosCumplimiento } from '@/components/dashboard/GraficosCumplimiento';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Users, GraduationCap, Briefcase, School, Download, Pencil, Trash2 } from 'lucide-react';
-import { getHorasLectivasDocente, getHorasDisponiblesDocente, getHorasNoLectivasDocente, getTotalHorasContratadasDocente } from '@/lib/utils/calculos-horas';
+import { getHorasLectivasDocente, getHorasDisponiblesDocente, getHorasNoLectivasDocente, getTotalHorasContratadasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
 import { exportarTodosHorariosEstablecimientoExcel } from '@/lib/utils/export-horarios';
 import { toast } from 'sonner';
 import { Establecimiento } from '@/types';
 
 export default function DashboardPage() {
-    const { establecimientos, docentes, horarios, removeDocente, getHorasUsadasDocente, getBloquesPorEstablecimiento, deleteEstablecimiento } = useAppStore();
+    const { establecimientos, docentes, horarios, removeDocente, getBloquesPorEstablecimiento, deleteEstablecimiento } = useAppStore();
     const [selectedEstId, setSelectedEstId] = useState<string>("all");
     const [editingEstablecimiento, setEditingEstablecimiento] = useState<Establecimiento | null>(null);
     const [formEstablecimientoOpen, setFormEstablecimientoOpen] = useState(false);
@@ -31,7 +30,7 @@ export default function DashboardPage() {
         let aulaUsadas = 0, pieUsadas = 0, eibUsadas = 0, directivaUsadas = 0;
 
         docentes.forEach(d => {
-            const horasUsadas = getHorasUsadasDocente(d.id);
+            const horasUsadas = getHorasUsadasEnBloques(d.id, horarios);
 
             d.asignaciones.forEach(a => {
                 const cargo = a.cargo.toUpperCase();
@@ -62,7 +61,7 @@ export default function DashboardPage() {
             eibUsadas: Math.round(eibUsadas),
             directivaUsadas: Math.round(directivaUsadas)
         };
-    }, [docentes, establecimientos, getHorasUsadasDocente]);
+    }, [docentes, establecimientos, horarios]);
 
     // --- CÁLCULOS POR ESTABLECIMIENTO ---
     const getEstadisticasEstablecimiento = (estId: number) => {
@@ -164,7 +163,7 @@ export default function DashboardPage() {
                                 </Button>
                             )}
                             <FormularioEstablecimiento />
-                            <FormularioDocente />
+                            {/* TODO: Reemplazar FormularioDocente - Ver TAREA 4 */}
                         </div>
                     </div>
                 </div>
@@ -346,7 +345,7 @@ export default function DashboardPage() {
                                         </CardContent>
                                     </Card>
                                     <div className="flex items-center justify-end">
-                                        <FormularioDocente />
+                                        {/* TODO: Reemplazar FormularioDocente - Ver TAREA 4 */}
                                     </div>
                                 </div>
 
@@ -379,7 +378,7 @@ export default function DashboardPage() {
                                                     {docentesLocal.map((docente) => {
                                                         const asignacion = docente.asignaciones.find(a => a.establecimientoId.toString() === selectedEstId);
                                                         const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
-                                                        const horasUsadas = getHorasUsadasDocente(docente.id);
+                                                        const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
                                                         const horasDisponibles = Math.max(0, horasLectivas - horasUsadas);
                                                         const porcentajeUsado = horasLectivas > 0 ? (horasUsadas / horasLectivas) * 100 : 0;
 

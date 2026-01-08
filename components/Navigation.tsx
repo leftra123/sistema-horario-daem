@@ -17,7 +17,7 @@ export function Navigation() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white shadow-lg border-b-4 border-blue-600">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-[1600px] mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo y Título */}
           <Link href="/" className="flex items-center gap-4 group">

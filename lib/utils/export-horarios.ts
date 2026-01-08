@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { BloqueHorario, DIAS, BloqueConfig, Docente, Establecimiento } from '@/types';
+import { generarResumenDocente } from './calculos-horas';
 
 // ===== EXCEL EXPORTS =====
 
@@ -111,7 +112,73 @@ export function exportarHorarioDocenteExcel(
   const docenteNombre = docente?.nombre || 'Docente_sin_nombre';
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, docenteNombre.substring(0, 31)); // Excel sheet names max 31 chars
+
+  // Hoja 1: Horario semanal
+  XLSX.utils.book_append_sheet(wb, ws, 'Horario Semanal');
+
+  // Hoja 2: Resumen de asignaciones (NUEVO)
+  const resumen = generarResumenDocente(docente);
+  const resumenData = [
+    // Encabezados
+    {
+      'Campo': 'Nombre',
+      'Valor': resumen.nombre
+    },
+    {
+      'Campo': 'Total Horas Contrato',
+      'Valor': `${resumen.horasContrato}h`
+    },
+    {
+      'Campo': 'Total Horas Lectivas',
+      'Valor': `${resumen.horasLectivas}h`
+    },
+    {
+      'Campo': 'Total Horas No Lectivas',
+      'Valor': `${resumen.horasNoLectivas}h`
+    },
+    {
+      'Campo': 'Total Horas PIE (Adicional)',
+      'Valor': `${resumen.horasPIE}h`
+    },
+    {},  // Fila vacía
+    {
+      'Campo': 'DETALLE POR ASIGNACIÓN',
+      'Valor': ''
+    },
+  ];
+
+  // Añadir tabla de asignaciones
+  const asignacionesData = resumen.detalleAsignaciones.map(asig => ({
+    'Establecimiento': asig.establecimiento,
+    'Tipo Asignación': asig.tipo,
+    'Ciclo': asig.tipo === 'PIE' || asig.tipo === 'Directiva' ? 'N/A' : asig.proporcion === '60/40' ? 'Primer Ciclo' : 'Segundo Ciclo',
+    'Proporción': asig.proporcion,
+    'Horas Contrato': `${asig.horas}h`,
+    'Horas Lectivas': `${asig.horasLectivas}h`,
+    'Horas No Lectivas': `${asig.horasNoLectivas}h`,
+  }));
+
+  const wsResumen = XLSX.utils.json_to_sheet(resumenData);
+
+  // Agregar tabla de asignaciones debajo
+  if (asignacionesData.length > 0) {
+    XLSX.utils.sheet_add_json(wsResumen, asignacionesData, {
+      skipHeader: false,
+      origin: resumenData.length + 1  // Empezar después del resumen
+    });
+  }
+
+  wsResumen['!cols'] = [
+    { wch: 30 },  // Campo/Establecimiento
+    { wch: 40 },  // Valor/Tipo Asignación
+    { wch: 20 },  // Ciclo
+    { wch: 12 },  // Proporción
+    { wch: 15 },  // Horas Contrato
+    { wch: 15 },  // Horas Lectivas
+    { wch: 18 }   // Horas No Lectivas
+  ];
+
+  XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen Asignaciones');
 
   const filename = `Horario_Docente_${docenteNombre.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
   XLSX.writeFile(wb, filename);
@@ -374,7 +441,8 @@ export function exportarHorarioDocentePDF(
   const docenteRut = docente?.rut || 'Sin RUT';
 
   const doc = new jsPDF('landscape');
-  const bloquesClase = bloques.filter(b => b.tipo === 'clase');
+  // Incluir todos los bloques para mantener la estructura visual (recreos, colaciones)
+  const bloquesAExportar = bloques; // No filtrar por tipo 'clase'
 
   // Header con diseño mejorado
   doc.setFillColor(20, 184, 166); // teal-600
@@ -417,23 +485,29 @@ export function exportarHorarioDocentePDF(
   });
 
   const headers = ['#', 'Horario', ...DIAS];
-  const rows = bloquesClase.map(bloque => {
+  const rows = bloquesAExportar.map(bloque => {
     const row = [
       bloque.id.toString(),
       `${bloque.horaInicio}\n${bloque.horaFin}`
     ];
 
-    DIAS.forEach(dia => {
-      const bloqueKey = `${dia}-${bloque.id}`;
-      const asignacion = bloquesAsignados.get(bloqueKey);
+    if (bloque.tipo === 'recreo') {
+      DIAS.forEach(() => row.push('☕ RECREO'));
+    } else if (bloque.tipo === 'colacion') {
+      DIAS.forEach(() => row.push('🍽️ COLACIÓN'));
+    } else {
+      DIAS.forEach(dia => {
+        const bloqueKey = `${dia}-${bloque.id}`;
+        const asignacion = bloquesAsignados.get(bloqueKey);
 
-      if (asignacion && asignacion.asignatura) {
-        const asignaturaNombre = asignacion.asignatura.nombre || asignacion.asignatura.codigo || 'Sin nombre';
-        row.push(`${asignacion.curso}\n${asignaturaNombre}`);
-      } else {
-        row.push('—');
-      }
-    });
+        if (asignacion && asignacion.asignatura) {
+          const asignaturaNombre = asignacion.asignatura.nombre || asignacion.asignatura.codigo || 'Sin nombre';
+          row.push(`${asignacion.curso}\n${asignaturaNombre}`);
+        } else {
+          row.push('—');
+        }
+      });
+    }
 
     return row;
   });
@@ -475,20 +549,32 @@ export function exportarHorarioDocentePDF(
         const rowIndex = data.row.index;
         const diaIndex = data.column.index - 2;
         const dia = DIAS[diaIndex];
-        const bloque = bloquesClase[rowIndex];
+        const bloque = bloquesAExportar[rowIndex];
 
         if (bloque) {
-          const bloqueKey = `${dia}-${bloque.id}`;
-          const asignacion = bloquesAsignados.get(bloqueKey);
-
-          if (asignacion && asignacion.asignatura && asignacion.asignatura.color) {
-            const rgb = hexToRGB(asignacion.asignatura.color);
-            data.cell.styles.fillColor = rgb;
-            data.cell.styles.textColor = [255, 255, 255];
+          if (bloque.tipo === 'recreo') {
+            data.cell.styles.fillColor = [255, 251, 235]; // amber-50
+            data.cell.styles.textColor = [146, 64, 14]; // amber-900
             data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.halign = 'center';
+          } else if (bloque.tipo === 'colacion') {
+            data.cell.styles.fillColor = [240, 253, 244]; // green-50
+            data.cell.styles.textColor = [20, 83, 45]; // green-900
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.halign = 'center';
           } else {
-            data.cell.styles.fillColor = [249, 250, 251];
-            data.cell.styles.textColor = [209, 213, 219];
+            const bloqueKey = `${dia}-${bloque.id}`;
+            const asignacion = bloquesAsignados.get(bloqueKey);
+
+            if (asignacion && asignacion.asignatura && asignacion.asignatura.color) {
+              const rgb = hexToRGB(asignacion.asignatura.color);
+              data.cell.styles.fillColor = rgb;
+              data.cell.styles.textColor = [255, 255, 255];
+              data.cell.styles.fontStyle = 'bold';
+            } else {
+              data.cell.styles.fillColor = [249, 250, 251];
+              data.cell.styles.textColor = [209, 213, 219];
+            }
           }
         }
       }
