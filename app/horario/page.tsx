@@ -2,7 +2,7 @@
 
 import { useState, useMemo, memo } from 'react';
 import { useAppStore } from '@/lib/store';
-import { ASIGNATURAS_BASE, DIAS, BloqueHorario, BloqueConfig } from '@/types';
+import { ASIGNATURAS_BASE, DIAS, BloqueHorario } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -141,18 +141,24 @@ export default function HorarioPage() {
     const est = establecimientos.find(e => e.id.toString() === establecimientoSel);
     if (!est) return [];
 
+    // ✨ Si tiene cursos combinados definidos, usarlos
+    if (est.cursosCombinadosConfig?.enabled && est.cursosCombinadosConfig.cursos.length > 0) {
+      return est.cursosCombinadosConfig.cursos.map(c => c.nombre);
+    }
+
+    // Generación estándar (sin cursos combinados)
     const cursosList: string[] = [];
     const [min, max] = est.niveles.split('-').map(Number);
-    
+
     for (let i = min; i <= max; i++) {
       (est.secciones || ['A']).forEach(sec => {
-        const nombre = i <= 8 
-          ? `${i}° Básico ${sec}` 
+        const nombre = i <= 8
+          ? `${i}° Básico ${sec}`
           : `${i - 8}° Medio ${sec}`;
         cursosList.push(nombre);
       });
     }
-    
+
     return cursosList;
   }, [establecimientoSel, establecimientos]);
 
@@ -258,7 +264,7 @@ export default function HorarioPage() {
     );
 
     // Aplicar asignaciones
-    const { exitosos, fallidos, errores } = aplicarAutoGeneracion(
+    const { exitosos, errores } = aplicarAutoGeneracion(
       resultado.asignaciones,
       horarioKey,
       (cursoKey, dia, bloqueId, asignatura, docenteId) =>
@@ -394,6 +400,7 @@ export default function HorarioPage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
+                      {/* TODO: Mejorar algoritmo de auto-generación antes de habilitar
                       <Button
                         onClick={handleAutoGenerar}
                         variant="outline"
@@ -405,6 +412,7 @@ export default function HorarioPage() {
                       </Button>
 
                       <div className="h-6 w-px bg-white/30 mx-1 hidden md:block" />
+                      */}
 
                       <span className="text-xs text-blue-100 font-semibold hidden md:inline">Exportar:</span>
                       <Button

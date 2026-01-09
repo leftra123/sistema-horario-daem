@@ -71,8 +71,7 @@ export function exportarHorarioCursoExcel(
 export function exportarHorarioDocenteExcel(
   docente: Docente,
   horarios: Record<string, Record<string, BloqueHorario>>,
-  bloques: BloqueConfig[],
-  establecimientoNombre: string
+  bloques: BloqueConfig[]
 ) {
   // Buscar todos los bloques donde aparece este docente
   const bloquesClase = bloques.filter(b => b.tipo === 'clase');

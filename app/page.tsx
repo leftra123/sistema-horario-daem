@@ -210,7 +210,7 @@ export default function Home() {
             const Icon = option.icon;
             return (
               <Card
-                key={option.href}
+                key={option.title}
                 className="group hover:shadow-2xl hover:border-blue-300 transition-all duration-300 cursor-pointer border-2 border-gray-100 overflow-hidden bg-white"
                 onClick={() => router.push(option.href)}
               >

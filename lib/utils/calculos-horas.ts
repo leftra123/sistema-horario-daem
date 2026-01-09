@@ -1,7 +1,7 @@
 // Funciones centralizadas para cálculo de horas según Ley 20.903
 // TODAS las validaciones y cálculos deben usar estas funciones
 
-import { Docente, Asignacion, Establecimiento, CicloEnsenanza, Proporcion, TipoAsignacion } from '@/types';
+import { Docente, Asignacion, CicloEnsenanza, Proporcion, TipoAsignacion } from '@/types';
 import { TABLA_60_40, TABLA_65_35, TablaEntry, MAX_HORAS, MIN_HORAS } from '@/lib/constants/tablas-horas';
 
 /**
@@ -131,41 +131,41 @@ export function getHorasDisponiblesParaBloques(
 
 /**
  * Obtiene horas TOTALES usadas por un docente (SUMA DE TODAS SUS ASIGNACIONES)
- * REGLA: PIE NO suma en total (es adicional)
+ * REGLA: PIE y Directiva NO suman en total (son adicionales o separados)
  * @param docente Docente
  * @returns Total horas que computan contra contrato
  *
  * @example
  * // Docente con: 30h Normal + 14h Directiva + 8h PIE
- * getTotalHorasUsadasDocente(docente) → 44 (sin contar PIE)
+ * getTotalHorasUsadasDocente(docente) → 30 (sin contar PIE ni Directiva)
  */
 export function getTotalHorasUsadasDocente(docente: Docente): number {
   return docente.asignaciones
-    .filter(a => a.tipoAsignacion !== "PIE") // PIE NO suma
+    .filter(a => a.tipoAsignacion !== "PIE" && a.tipoAsignacion !== "Directiva") // PIE y Directiva NO suman
     .reduce((sum, a) => sum + a.horasContrato, 0);
 }
 
 /**
  * Obtiene horas LECTIVAS totales usadas por un docente
- * REGLA: PIE NO suma en total (es adicional)
+ * REGLA: PIE y Directiva NO suman en total
  * @param docente Docente
  * @returns Total horas lectivas que computan contra contrato
  */
 export function getTotalHorasLectivasDocente(docente: Docente): number {
   return docente.asignaciones
-    .filter(a => a.tipoAsignacion !== "PIE")
+    .filter(a => a.tipoAsignacion !== "PIE" && a.tipoAsignacion !== "Directiva")
     .reduce((sum, a) => sum + a.horasLectivas, 0);
 }
 
 /**
  * Obtiene horas NO LECTIVAS totales usadas por un docente
- * REGLA: PIE NO suma en total (es adicional)
+ * REGLA: PIE y Directiva NO suman en total
  * @param docente Docente
  * @returns Total horas no lectivas que computan contra contrato
  */
 export function getTotalHorasNoLectivasDocente(docente: Docente): number {
   return docente.asignaciones
-    .filter(a => a.tipoAsignacion !== "PIE")
+    .filter(a => a.tipoAsignacion !== "PIE" && a.tipoAsignacion !== "Directiva")
     .reduce((sum, a) => sum + a.horasNoLectivas, 0);
 }
 
@@ -177,6 +177,17 @@ export function getTotalHorasNoLectivasDocente(docente: Docente): number {
 export function getTotalHorasPIE(docente: Docente): number {
   return docente.asignaciones
     .filter(a => a.tipoAsignacion === "PIE")
+    .reduce((sum, a) => sum + a.horasContrato, 0);
+}
+
+/**
+ * Obtiene total de horas Directiva (adicionales/separadas) del docente
+ * @param docente Docente
+ * @returns Total horas Directiva (no computan contra contrato)
+ */
+export function getTotalHorasDirectiva(docente: Docente): number {
+  return docente.asignaciones
+    .filter(a => a.tipoAsignacion === "Directiva")
     .reduce((sum, a) => sum + a.horasContrato, 0);
 }
 
@@ -199,7 +210,7 @@ export function validarNoExcesoHoras(docente: Docente, horasContratoMaximas?: nu
     throw new Error(
       `Docente ${docente.nombre} excede su contrato: ` +
       `${horas_usadas}h asignadas > ${horas_contrato}h contrato. ` +
-      `(PIE no suma en este cálculo)`
+      `(PIE y Directiva no suman en este cálculo)`
     );
   }
 }
@@ -266,6 +277,39 @@ export function getHorasUsadasEnBloques(
 }
 
 /**
+ * Calcula horas usadas en horarios para un ciclo específico
+ * Cuenta solo los bloques asignados en cursos del ciclo especificado
+ * @param docenteId ID del docente
+ * @param horarios Objeto de horarios
+ * @param ciclo Ciclo de enseñanza a filtrar
+ * @returns Cantidad de bloques asignados en cursos del ciclo especificado
+ */
+export function getHorasUsadasEnBloquesPorCiclo(
+  docenteId: number,
+  horarios: Record<string, Record<string, { docenteId: number }>>,
+  ciclo: CicloEnsenanza
+): number {
+  let horasUsadas = 0;
+
+  Object.entries(horarios).forEach(([cursoKey, horarioCurso]) => {
+    // Detectar el ciclo del curso desde su nombre
+    const cursoNombre = cursoKey.split('-').slice(1).join(' ');
+    const cicloCurso = detectarCicloDesdeCurso(cursoNombre);
+
+    // Solo contar si el curso es del ciclo especificado
+    if (cicloCurso === ciclo) {
+      Object.values(horarioCurso).forEach(bloque => {
+        if (bloque.docenteId === docenteId) {
+          horasUsadas++;
+        }
+      });
+    }
+  });
+
+  return horasUsadas;
+}
+
+/**
  * Calcula horas disponibles para asignar en horarios
  * Horas disponibles = Horas lectivas - Horas usadas
  */
@@ -309,8 +353,7 @@ export function tieneConflictoHorario(
  * Suma las horas lectivas de todas sus asignaciones según la tabla correspondiente
  */
 export function getHorasLectivasDocente(
-  docente: Docente,
-  establecimientos: Establecimiento[]
+  docente: Docente
 ): number {
   return getTotalHorasLectivasDocente(docente);
 }
@@ -320,8 +363,7 @@ export function getHorasLectivasDocente(
  * Calcula las horas no lectivas totales de un docente
  */
 export function getHorasNoLectivasDocente(
-  docente: Docente,
-  establecimientos: Establecimiento[]
+  docente: Docente
 ): number {
   return getTotalHorasNoLectivasDocente(docente);
 }
@@ -351,8 +393,7 @@ export function calcularTotalAsignacion(asig: Asignacion): number {
  * Obtiene la tabla de horas lectivas/no lectivas según establecimiento y horas totales
  */
 export function getTablaHoras(
-  totalHoras: number,
-  establecimiento: Establecimiento
+  totalHoras: number
 ): TablaEntry | null {
   // NOTA: Establecimiento ya no tiene proporcion, se debe usar proporcion de Asignacion
   // Esta función queda por compatibilidad pero no debe usarse
@@ -374,6 +415,7 @@ export interface ResumenHorasDocente {
   horasLectivas: number;
   horasNoLectivas: number;
   horasPIE: number;
+  horasDirectiva: number;
   detalleAsignaciones: {
     establecimiento: string;
     tipo: TipoAsignacion;
@@ -399,6 +441,7 @@ export function generarResumenDocente(docente: Docente): ResumenHorasDocente {
   const horasLectivas = getTotalHorasLectivasDocente(docente);
   const horasNoLectivas = getTotalHorasNoLectivasDocente(docente);
   const horasPIE = getTotalHorasPIE(docente);
+  const horasDirectiva = getTotalHorasDirectiva(docente);
   const horasContrato = getTotalHorasUsadasDocente(docente);
 
   return {
@@ -407,6 +450,7 @@ export function generarResumenDocente(docente: Docente): ResumenHorasDocente {
     horasLectivas,
     horasNoLectivas,
     horasPIE,
+    horasDirectiva,
     detalleAsignaciones: docente.asignaciones.map(a => ({
       establecimiento: a.establecimientoNombre,
       tipo: a.tipoAsignacion,
@@ -424,27 +468,45 @@ export function generarResumenDocente(docente: Docente): ResumenHorasDocente {
 
 /**
  * Detecta automáticamente el ciclo de enseñanza según el nivel del curso
+ * ✨ MEJORADO: Ahora soporta cursos combinados (multigrado)
  *
- * @param cursoNombre - Nombre del curso (ej: "3° Básico A", "7° Básico B", "2° Medio A")
+ * @param cursoNombre - Nombre del curso (ej: "3° Básico A", "1°-2° Básico A", "4°-5° Básico B")
  * @returns "Primer Ciclo" si es 1°-4° Básico, "Segundo Ciclo" en caso contrario
  *
+ * **Lógica para cursos combinados**:
+ * - Detecta TODOS los niveles en el nombre (ej: "1°-2°" → [1, 2])
+ * - Usa el nivel MÁS ALTO para determinar el ciclo
+ * - Esto garantiza que se use la proporción más conservadora (65/35)
+ *
  * @example
- * detectarCicloDesdeCurso("3° Básico A") // "Primer Ciclo"
- * detectarCicloDesdeCurso("7° Básico B") // "Segundo Ciclo"
- * detectarCicloDesdeCurso("2° Medio A")  // "Segundo Ciclo"
+ * detectarCicloDesdeCurso("3° Básico A")        // "Primer Ciclo"
+ * detectarCicloDesdeCurso("1°-2° Básico A")     // "Primer Ciclo" (max=2)
+ * detectarCicloDesdeCurso("4°-5° Básico A")     // "Segundo Ciclo" (max=5) ✨
+ * detectarCicloDesdeCurso("3°-4°-5° Básico A")  // "Segundo Ciclo" (max=5) ✨
+ * detectarCicloDesdeCurso("7°-8° Básico B")     // "Segundo Ciclo"
+ * detectarCicloDesdeCurso("2° Medio A")         // "Segundo Ciclo"
  */
 export function detectarCicloDesdeCurso(cursoNombre: string): CicloEnsenanza {
-  // Extraer nivel del nombre del curso
-  const match = cursoNombre.match(/(\d+)°\s*(Básico|Medio)/);
+  // 🆕 Buscar TODOS los números seguidos de "°" (cursos combinados)
+  const numerosMatch = cursoNombre.match(/(\d+)°/g);
 
-  if (!match) return 'Segundo Ciclo'; // Default seguro
+  if (!numerosMatch || numerosMatch.length === 0) {
+    return 'Segundo Ciclo'; // Default seguro
+  }
 
-  const nivel = parseInt(match[1]);
-  const tipo = match[2]; // "Básico" o "Medio"
+  // Extraer los niveles como números
+  const niveles = numerosMatch.map(n => parseInt(n.replace('°', '')));
+
+  // Determinar si es Básico o Medio
+  const esMedio = /Medio/i.test(cursoNombre);
 
   // Media siempre es Segundo Ciclo
-  if (tipo === 'Medio') return 'Segundo Ciclo';
+  if (esMedio) return 'Segundo Ciclo';
+
+  // 🆕 Para cursos combinados, usar el nivel MÁS ALTO
+  // Esto garantiza usar la proporción más conservadora
+  const nivelMasAlto = Math.max(...niveles);
 
   // Básico: 1-4 = Primer Ciclo, 5-8 = Segundo Ciclo
-  return nivel <= 4 ? 'Primer Ciclo' : 'Segundo Ciclo';
+  return nivelMasAlto <= 4 ? 'Primer Ciclo' : 'Segundo Ciclo';
 }

@@ -8,11 +8,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Docente, Asignacion, CARGOS, DIAS, SUBVENCIONES, Subvencion, TIPOS_ASIGNACION, CICLOS_ENSENANZA } from '@/types';
+import { Docente, Asignacion, CARGOS, DIAS, TIPOS_ASIGNACION, CICLOS_ENSENANZA } from '@/types';
 import { validarRut, formatearRut } from '@/lib/utils/validaciones';
 import { getProporcionalidad, getHorasLectivasDeTabla, calcularHorasNoLectivas } from '@/lib/utils/calculos-horas';
 import { toast } from 'sonner';
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, Copy } from 'lucide-react';
+
+// Helper para generar IDs únicos (evita problemas de pureza en render)
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random()}`;
+};
 
 interface DocenteFormModalProps {
   open: boolean;
@@ -24,11 +32,13 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
   const { establecimientos, docentes, addDocente, updateDocente } = useAppStore();
   const [nombre, setNombre] = useState('');
   const [rut, setRut] = useState('');
+  const [rutValido, setRutValido] = useState<boolean | null>(null);
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
 
   const resetForm = () => {
     setNombre('');
     setRut('');
+    setRutValido(null);
     setAsignaciones([]);
   };
 
@@ -58,7 +68,7 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
     const horasNoLectivas = calcularHorasNoLectivas(horasContrato, horasLectivas);
 
     const nuevaAsignacion: Asignacion = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: generateId(),
       establecimientoId: est.id,
       establecimientoNombre: est.nombre,
       cargo: CARGOS[0],
@@ -71,11 +81,39 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
       horasNoLectivas
     };
 
-    setAsignaciones([...asignaciones, nuevaAsignacion]);
+    setAsignaciones([nuevaAsignacion, ...asignaciones]);
   };
 
   const handleRemoveAsignacion = (index: number) => {
     setAsignaciones(asignaciones.filter((_, i) => i !== index));
+  };
+
+  // ✅ NUEVA FUNCIÓN: Duplicar asignación para el otro ciclo
+  const handleDuplicarParaOtroCiclo = (index: number) => {
+    const asigOriginal = asignaciones[index];
+    const nuevoCiclo = asigOriginal.ciclo === 'Primer Ciclo' ? 'Segundo Ciclo' : 'Primer Ciclo';
+
+    const est = establecimientos.find(e => e.id === asigOriginal.establecimientoId);
+    if (!est) return;
+
+    const nuevaProporcion = getProporcionalidad(nuevoCiclo, est.prioritarios);
+    const nuevasHorasLectivas = getHorasLectivasDeTabla(asigOriginal.horasContrato, nuevaProporcion);
+    const nuevasHorasNoLectivas = calcularHorasNoLectivas(asigOriginal.horasContrato, nuevasHorasLectivas);
+
+    const asignacionDuplicada: Asignacion = {
+      ...asigOriginal,
+      id: generateId(),
+      ciclo: nuevoCiclo,
+      proporcion: nuevaProporcion,
+      horasLectivas: nuevasHorasLectivas,
+      horasNoLectivas: nuevasHorasNoLectivas,
+    };
+
+    // Insertar después de la asignación original
+    const newAsignaciones = [...asignaciones];
+    newAsignaciones.splice(index + 1, 0, asignacionDuplicada);
+    setAsignaciones(newAsignaciones);
+    toast.success(`Asignación duplicada para ${nuevoCiclo}`);
   };
 
   const handleUpdateAsignacion = (index: number, field: keyof Asignacion, value: unknown) => {
@@ -126,23 +164,8 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
     setAsignaciones(newAsigs);
   };
 
-  const toggleSubvencion = (asigIdx: number, subvencion: Subvencion) => {
-    const newAsigs = [...asignaciones];
-    const subvenciones = newAsigs[asigIdx].subvenciones || [];
-
-    if (subvenciones.includes(subvencion)) {
-      newAsigs[asigIdx].subvenciones = subvenciones.filter(s => s !== subvencion);
-    } else {
-      // Limitar a máximo 3 subvenciones
-      if (subvenciones.length >= 3) {
-        toast.error('Máximo 3 subvenciones por asignación');
-        return;
-      }
-      newAsigs[asigIdx].subvenciones = [...subvenciones, subvencion];
-    }
-
-    setAsignaciones(newAsigs);
-  };
+  // DEPRECADO: Se eliminó sección de subvenciones, se usa solo tipoAsignacion
+  // const toggleSubvencion = (asigIdx: number, subvencion: Subvencion) => { ... }
 
   const handleSubmit = () => {
     // Validaciones
@@ -174,9 +197,13 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
       }
     }
 
-    const totalHoras = asignaciones.reduce((sum, a) => sum + a.horasContrato, 0);
+    // Validar horas (excluyendo PIE y Directiva)
+    const totalHoras = asignaciones
+      .filter(a => a.tipoAsignacion !== 'PIE' && a.tipoAsignacion !== 'Directiva')
+      .reduce((sum, a) => sum + a.horasContrato, 0);
+
     if (totalHoras > 44) {
-      toast.error(`Total de horas (${totalHoras}h) excede el máximo de 44h`);
+      toast.error(`Total de horas (${totalHoras}h) excede el máximo de 44h (PIE y Directiva no suman)`);
       return;
     }
 
@@ -221,7 +248,7 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {docenteToEdit ? 'Editar Docente' : 'Agregar Nuevo Docente'}
@@ -246,13 +273,47 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
 
               <div className="space-y-2">
                 <Label htmlFor="rut">RUT *</Label>
-                <Input
-                  id="rut"
-                  value={rut}
-                  onChange={(e) => setRut(e.target.value)}
-                  onBlur={() => setRut(rut ? formatearRut(rut) : '')}
-                  placeholder="Ej: 12.345.678-9"
-                />
+                <div className="relative">
+                  <Input
+                    id="rut"
+                    value={rut}
+                    onChange={(e) => {
+                      const newRut = e.target.value;
+                      setRut(newRut);
+
+                      // Validar en tiempo real si tiene suficiente longitud
+                      if (newRut.trim().length >= 8) {
+                        setRutValido(validarRut(newRut));
+                      } else {
+                        setRutValido(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rut) {
+                        const formatted = formatearRut(rut);
+                        setRut(formatted);
+                        setRutValido(validarRut(formatted));
+                      }
+                    }}
+                    placeholder="Ej: 12.345.678-9"
+                    className={`pr-10 ${
+                      rutValido === false ? 'border-red-500 focus:ring-red-500' :
+                      rutValido === true ? 'border-green-500 focus:ring-green-500' : ''
+                    }`}
+                  />
+                  {rutValido !== null && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {rutValido ? (
+                        <span className="text-green-600 text-lg">✓</span>
+                      ) : (
+                        <span className="text-red-600 text-lg">✗</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {rutValido === false && (
+                  <p className="text-xs text-red-600 mt-1">RUT inválido</p>
+                )}
               </div>
             </div>
           </div>
@@ -273,6 +334,17 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
               </Button>
             </div>
 
+            {/* ✅ Nota explicativa sobre múltiples ciclos */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-900 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>
+                  <strong>💡 Tip:</strong> Si el docente trabaja en <strong>ambos ciclos</strong> del mismo establecimiento (ej: 1º-4º básico y 5º-8º básico),
+                  crea la primera asignación y luego haz click en <strong>&quot;Ambos ciclos&quot;</strong> para duplicarla automáticamente con el otro ciclo.
+                </span>
+              </p>
+            </div>
+
             {asignaciones.length === 0 ? (
               <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
                 <p className="text-sm">No hay asignaciones</p>
@@ -283,16 +355,38 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                 {asignaciones.map((asig, idx) => (
                   <div key={idx} className="border rounded-lg p-4 bg-gray-50 space-y-3">
                     <div className="flex justify-between items-center">
-                      <Badge variant="secondary">Asignación {idx + 1}</Badge>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveAsignacion(idx)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">Asignación {idx + 1}</Badge>
+                        {/* ✅ Indicador si hay otra asignación al mismo establecimiento */}
+                        {asignaciones.filter(a => a.establecimientoId === asig.establecimientoId).length > 1 && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 border-blue-300 text-blue-700">
+                            📚 Múltiples ciclos
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        {/* ✅ Botón para duplicar al otro ciclo */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDuplicarParaOtroCiclo(idx)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1"
+                          title="Duplicar para el otro ciclo (ej: si es Primer Ciclo, crea otra asignación para Segundo Ciclo)"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span className="text-xs">Ambos ciclos</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveAsignacion(idx)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -302,10 +396,10 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                           value={asig.establecimientoId.toString()}
                           onValueChange={(value) => handleUpdateAsignacion(idx, 'establecimientoId', value)}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-w-[400px]">
                             {establecimientos.map(e => (
                               <SelectItem key={e.id} value={e.id.toString()}>
                                 {e.nombre}
@@ -321,10 +415,10 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                           value={asig.cargo}
                           onValueChange={(value) => handleUpdateAsignacion(idx, 'cargo', value)}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-w-[300px]">
                             {CARGOS.map(cargo => (
                               <SelectItem key={cargo} value={cargo}>
                                 {cargo}
@@ -356,6 +450,7 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                           type="number"
                           min="1"
                           max="44"
+                          placeholder="Ej: 44"
                           value={asig.horasContrato}
                           onChange={(e) => handleUpdateAsignacion(idx, 'horasContrato', parseInt(e.target.value) || 0)}
                         />
@@ -428,7 +523,7 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                       )}
                       {asig.tipoAsignacion === "Directiva" && (
                         <p className="text-xs text-gray-600 bg-gray-50 border border-gray-300 rounded p-2 mt-2">
-                          🚫 <strong>Directiva</strong> NO permite asignación de bloques (solo administrativo)
+                          ⚠️ <strong>Directiva</strong> NO suma en contrato base y NO permite asignación de bloques
                         </p>
                       )}
                     </div>
@@ -465,49 +560,38 @@ export function DocenteFormModal({ open, onOpenChange, docenteToEdit }: DocenteF
                       )}
                     </div>
 
-                    {/* Subvenciones */}
-                    <div className="space-y-2 border-t pt-3">
-                      <Label className="text-xs text-gray-600 flex items-center gap-2">
-                        <span>💰</span>
-                        Subvenciones asociadas a esta asignación
-                        <span className="text-[10px] text-gray-400">(máximo 3)</span>
-                      </Label>
-                      <div className="flex flex-col gap-2">
-                        {SUBVENCIONES.map(subv => {
-                          const seleccionada = asig.subvenciones?.includes(subv.value) || false;
-                          return (
-                            <label
-                              key={subv.value}
-                              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={seleccionada}
-                                onChange={() => toggleSubvencion(idx, subv.value)}
-                                className="w-4 h-4 rounded cursor-pointer"
-                              />
-                              <span className="flex items-center gap-2 flex-1">
-                                <span
-                                  className="w-3 h-3 rounded-full flex-shrink-0"
-                                  style={{ backgroundColor: subv.color }}
-                                ></span>
-                                <span className="text-xs">{subv.label}</span>
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    {/* Subvenciones eliminadas - se usa solo tipoAsignacion */}
                   </div>
                 ))}
               </div>
             )}
 
             {asignaciones.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm space-y-2">
                 <p className="font-semibold text-blue-900">
-                  Total de horas: {asignaciones.reduce((sum, a) => sum + a.horasContrato, 0)}h / 44h
+                  Total de horas (contrato): {asignaciones
+                    .filter(a => a.tipoAsignacion !== 'PIE' && a.tipoAsignacion !== 'Directiva')
+                    .reduce((sum, a) => sum + a.horasContrato, 0)}h / 44h
                 </p>
+
+                {/* ✅ Mostrar resumen por ciclo si hay múltiples */}
+                {(() => {
+                  const primerCiclo = asignaciones.filter(a => a.ciclo === 'Primer Ciclo');
+                  const segundoCiclo = asignaciones.filter(a => a.ciclo === 'Segundo Ciclo');
+
+                  if (primerCiclo.length > 0 && segundoCiclo.length > 0) {
+                    return (
+                      <div className="text-xs text-blue-800 space-y-1 pt-2 border-t border-blue-200">
+                        <p className="font-medium">Distribución por ciclo:</p>
+                        <div className="pl-2 space-y-0.5">
+                          <p>• Primer Ciclo (1º-4º): {primerCiclo.reduce((sum, a) => sum + a.horasContrato, 0)}h</p>
+                          <p>• Segundo Ciclo (5º-8º+): {segundoCiclo.reduce((sum, a) => sum + a.horasContrato, 0)}h</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
           </div>

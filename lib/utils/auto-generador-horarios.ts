@@ -52,7 +52,6 @@ export function autoGenerarHorarioCurso(
   const bloquesClase = bloques.filter(b => b.tipo === 'clase');
   const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
-  let asignados = 0;
   let intentos = 0;
   const maxIntentos = 100; // Evitar loops infinitos
 
@@ -63,7 +62,6 @@ export function autoGenerarHorarioCurso(
 
       // Si ya está asignado, skip
       if (horarioActual[bloqueKey]) {
-        asignados++;
         return;
       }
 
@@ -107,7 +105,6 @@ export function autoGenerarHorarioCurso(
           `✅ ${dia} Bloque ${bloque.id} (${bloque.horaInicio}): ${asignatura.nombre} - ${docente.nombre}`
         );
 
-        asignados++;
         asignado = true;
         break; // Bloque asignado, pasar al siguiente
       }

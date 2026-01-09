@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock } from 'lucide-react';
-import { Docente, BloqueConfig, HorarioData, DIAS } from '@/types';
+import { Docente, DIAS } from '@/types';
 import { useAppStore } from '@/lib/store';
 import { getHorasLectivasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
 
@@ -87,7 +87,7 @@ export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProp
     const bloquesPorDia = Math.floor(bloquesNoLectivosNecesarios / DIAS.length);
     let bloquesRestantes = bloquesNoLectivosNecesarios % DIAS.length;
 
-    DIAS.forEach((dia, diaIdx) => {
+    DIAS.forEach((dia) => {
       let bloquesAgregadosHoy = 0;
       const bloquesParaHoy = bloquesPorDia + (bloquesRestantes > 0 ? 1 : 0);
       if (bloquesRestantes > 0) bloquesRestantes--;
@@ -166,11 +166,11 @@ export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProp
         <div className="flex flex-wrap gap-3 mb-4 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-blue-500"></div>
-            <span>Clase asignada</span>
+            <span>Clase asignada (Lectivas)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gray-300"></div>
-            <span>Hora no lectiva</span>
+            <div className="w-4 h-4 rounded bg-amber-200 border-2 border-amber-400"></div>
+            <span>Hora no lectiva (Prep./Admin.)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded border-2 border-gray-200"></div>
@@ -227,12 +227,13 @@ export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProp
                         </td>
                       );
                     } else if (esNoLectivo) {
-                      // Bloque de hora no lectiva
+                      // Bloque de hora no lectiva (Prep./Admin.)
                       return (
                         <td key={dia} className="p-1 border-r h-20">
-                          <div className="h-full w-full bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-500">
+                          <div className="h-full w-full bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-300 rounded-lg flex flex-col items-center justify-center text-amber-700">
                             <span className="text-lg mb-1">📋</span>
-                            <span className="text-[9px] font-semibold">No Lectiva</span>
+                            <span className="text-[9px] font-bold">NO LECTIVA</span>
+                            <span className="text-[8px] text-amber-600 mt-0.5">Prep./Admin.</span>
                           </div>
                         </td>
                       );

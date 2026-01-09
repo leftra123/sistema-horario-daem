@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { School, Plus, X, AlertTriangle, Palette } from 'lucide-react';
+import { School, Plus, X, Palette } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { generarBloquesDesdeConfiguracion, validarConfiguracionHorario } from '@/lib/utils/generador-bloques';
@@ -38,9 +38,29 @@ export default function FormularioEstablecimiento({
   const [nombre, setNombre] = useState('');
   const [niveles, setNiveles] = useState('1-8');
   const [prioritarios, setPrioritarios] = useState(false);
-  const [proporcion, setProporcion] = useState('60/40');
   const [secciones, setSecciones] = useState<string[]>(['A']);
   const [nuevaSeccion, setNuevaSeccion] = useState('');
+
+  // ✨ Cursos combinados
+  const [tieneCursosCombinados, setTieneCursosCombinados] = useState(false);
+  const [cursosCombinadosList, setCursosCombinadosList] = useState<{
+    nombre: string;
+    niveles: number[];
+    seccion: string;
+  }[]>([]);
+
+  // UI Estado para crear curso combinado
+  const [nivelesSeleccionados, setNivelesSeleccionados] = useState<number[]>([]);
+  const [seccionCursoCombinado, setSeccionCursoCombinado] = useState('A');
+
+  const nivelesDisponibles = useMemo(() => {
+    const [min, max] = niveles.split('-').map(Number);
+    const result = [];
+    for (let i = min; i <= max; i++) {
+      result.push(i);
+    }
+    return result;
+  }, [niveles]);
 
   // Asignaturas personalizadas
   const [asignaturasSeleccionadas, setAsignaturasSeleccionadas] = useState<Asignatura[]>([]);
@@ -64,8 +84,9 @@ export default function FormularioEstablecimiento({
     setNombre('');
     setNiveles('1-8');
     setPrioritarios(false);
-    setProporcion('60/40');
     setSecciones(['A']);
+    setTieneCursosCombinados(false);
+    setCursosCombinadosList([]);
     setAsignaturasSeleccionadas([]);
     setNuevaAsignaturaNombre('');
     setUsarPersonalizada(false);
@@ -89,11 +110,16 @@ export default function FormularioEstablecimiento({
       setNombre(establecimientoToEdit.nombre);
       setNiveles(establecimientoToEdit.niveles);
       setPrioritarios(establecimientoToEdit.prioritarios);
-      setProporcion(establecimientoToEdit.prioritarios ? '60/40' : '65/35'); // Calculado desde prioritarios
       setSecciones(establecimientoToEdit.secciones || ['A']);
 
       // Cargar asignaturas personalizadas si existen
       setAsignaturasSeleccionadas(establecimientoToEdit.asignaturas || []);
+
+      // ✨ Cargar cursos combinados si existen
+      if (establecimientoToEdit.cursosCombinadosConfig) {
+        setTieneCursosCombinados(establecimientoToEdit.cursosCombinadosConfig.enabled);
+        setCursosCombinadosList(establecimientoToEdit.cursosCombinadosConfig.cursos || []);
+      }
 
       // Cargar configuración de horario si existe
       if (establecimientoToEdit.configuracionHorario) {
@@ -216,6 +242,10 @@ export default function FormularioEstablecimiento({
         prioritarios,
         secciones,
         asignaturas: asignaturasSeleccionadas.length > 0 ? asignaturasSeleccionadas : undefined,
+        cursosCombinadosConfig: tieneCursosCombinados ? {
+          enabled: true,
+          cursos: cursosCombinadosList
+        } : undefined,
         configuracionHorario
       };
 
@@ -232,6 +262,10 @@ export default function FormularioEstablecimiento({
         prioritarios,
         secciones,
         asignaturas: asignaturasSeleccionadas.length > 0 ? asignaturasSeleccionadas : undefined,
+        cursosCombinadosConfig: tieneCursosCombinados ? {
+          enabled: true,
+          cursos: cursosCombinadosList
+        } : undefined,
         configuracionHorario
       };
 
@@ -289,36 +323,21 @@ export default function FormularioEstablecimiento({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="niveles">Niveles</Label>
-                <Select value={niveles} onValueChange={setNiveles}>
-                  <SelectTrigger id="niveles">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1-6">1° a 6° Básico</SelectItem>
-                    <SelectItem value="1-8">1° a 8° Básico</SelectItem>
-                    <SelectItem value="7-8">7° a 8° Básico</SelectItem>
-                    <SelectItem value="7-12">7° Básico a 4° Medio</SelectItem>
-                    <SelectItem value="9-12">1° a 4° Medio</SelectItem>
-                    <SelectItem value="1-12">1° Básico a 4° Medio (Completo)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="proporcion">Proporción Horas Lectivas</Label>
-                <Select value={proporcion} onValueChange={setProporcion}>
-                  <SelectTrigger id="proporcion">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="60/40">60% Lectivas / 40% No Lectivas</SelectItem>
-                    <SelectItem value="65/35">65% Lectivas / 35% No Lectivas</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="niveles">Niveles</Label>
+              <Select value={niveles} onValueChange={setNiveles}>
+                <SelectTrigger id="niveles">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1-6">1° a 6° Básico</SelectItem>
+                  <SelectItem value="1-8">1° a 8° Básico</SelectItem>
+                  <SelectItem value="7-8">7° a 8° Básico</SelectItem>
+                  <SelectItem value="7-12">7° Básico a 4° Medio</SelectItem>
+                  <SelectItem value="9-12">1° a 4° Medio</SelectItem>
+                  <SelectItem value="1-12">1° Básico a 4° Medio (Completo)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -360,6 +379,161 @@ export default function FormularioEstablecimiento({
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
+            </div>
+            {/* ✨ Cursos Combinados (Multigrado) */}
+            <div className="space-y-2 border-t pt-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={tieneCursosCombinados}
+                    onChange={e => {
+                      setTieneCursosCombinados(e.target.checked);
+                      if (!e.target.checked) {
+                        setCursosCombinadosList([]);
+                      }
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <span className="font-medium">Este establecimiento tiene cursos combinados (multigrado)</span>
+                </Label>
+              </div>
+
+              {tieneCursosCombinados && (
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg border animate-in fade-in slide-in-from-top-2">
+                  
+                  {/* Selector de Niveles */}
+                  <div className="space-y-3">
+                    <Label className="text-xs text-gray-700 font-semibold uppercase tracking-wider">
+                      1. Selecciona los niveles a agrupar
+                    </Label>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {nivelesDisponibles.map((nivel) => {
+                        const isSelected = nivelesSeleccionados.includes(nivel);
+                        const label = nivel <= 8 ? `${nivel}°` : `${nivel - 8}° M`;
+                        
+                        return (
+                          <div
+                            key={nivel}
+                            onClick={() => {
+                              if (isSelected) {
+                                setNivelesSeleccionados(nivelesSeleccionados.filter(n => n !== nivel));
+                              } else {
+                                setNivelesSeleccionados([...nivelesSeleccionados, nivel]);
+                              }
+                            }}
+                            className={`
+                              cursor-pointer rounded-md border p-2 text-center text-sm font-medium transition-all
+                              ${isSelected 
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' 
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'}
+                            `}
+                          >
+                            {label}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Selector de Sección y Botón Agregar */}
+                  <div className="flex gap-4 items-end">
+                    <div className="w-24">
+                      <Label className="text-xs text-gray-700 font-semibold uppercase tracking-wider mb-1.5 block">
+                        2. Sección
+                      </Label>
+                      <Input 
+                        value={seccionCursoCombinado}
+                        onChange={(e) => setSeccionCursoCombinado(e.target.value.toUpperCase())}
+                        maxLength={1}
+                        className="text-center font-bold"
+                      />
+                    </div>
+                    <Button 
+                      type="button"
+                      onClick={() => {
+                        if (nivelesSeleccionados.length === 0) {
+                          toast.error("Selecciona al menos un nivel");
+                          return;
+                        }
+                        
+                        const sortedNiveles = [...nivelesSeleccionados].sort((a, b) => a - b);
+                        const labels = sortedNiveles.map(n => n <= 8 ? `${n}°` : `${n-8}°`);
+                        
+                        // Determinar ciclo/nombre
+                        const allBasica = sortedNiveles.every(n => n <= 8);
+                        const allMedia = sortedNiveles.every(n => n > 8);
+                        let suffix = "Mixto";
+                        if (allBasica) suffix = "Básico";
+                        if (allMedia) suffix = "Medio";
+                        
+                        const nombreCurso = `${labels.join('-')} ${suffix} ${seccionCursoCombinado}`;
+                        
+                        // Validar duplicados
+                        if (cursosCombinadosList.some(c => c.nombre === nombreCurso)) {
+                          toast.error("Este curso combinado ya existe");
+                          return;
+                        }
+                        
+                        setCursosCombinadosList([
+                          ...cursosCombinadosList,
+                          {
+                            nombre: nombreCurso,
+                            niveles: sortedNiveles,
+                            seccion: seccionCursoCombinado
+                          }
+                        ]);
+                        
+                        // Reset selection
+                        setNivelesSeleccionados([]);
+                        toast.success(`Curso ${nombreCurso} creado`);
+                      }}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      disabled={nivelesSeleccionados.length === 0}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Crear Curso Combinado
+                    </Button>
+                  </div>
+
+                  {/* Lista de Cursos Creados */}
+                  {cursosCombinadosList.length > 0 && (
+                    <div className="mt-4 border-t pt-4">
+                      <Label className="text-xs text-gray-700 font-semibold uppercase tracking-wider mb-2 block">
+                        Cursos Combinados Definidos
+                      </Label>
+                      <div className="space-y-2">
+                        {cursosCombinadosList.map((curso, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-lg border shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-blue-100 p-2 rounded text-blue-700">
+                                <School className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-800 text-sm">{curso.nombre}</p>
+                                <p className="text-xs text-gray-500">
+                                  Agrupa niveles: {curso.niveles.map(n => n <= 8 ? `${n}°` : `${n-8}° M`).join(', ')}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setCursosCombinadosList(cursosCombinadosList.filter((_, i) => i !== idx));
+                              }}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

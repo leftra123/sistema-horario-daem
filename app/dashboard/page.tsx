@@ -11,7 +11,7 @@ import FormularioEstablecimiento from '@/components/forms/FormularioEstablecimie
 import { GraficosCumplimiento } from '@/components/dashboard/GraficosCumplimiento';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Users, GraduationCap, Briefcase, School, Download, Pencil, Trash2 } from 'lucide-react';
-import { getHorasLectivasDocente, getHorasDisponiblesDocente, getHorasNoLectivasDocente, getTotalHorasContratadasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
+import { getHorasLectivasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
 import { exportarTodosHorariosEstablecimientoExcel } from '@/lib/utils/export-horarios';
 import { toast } from 'sonner';
 import { Establecimiento } from '@/types';

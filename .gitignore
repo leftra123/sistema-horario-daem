@@ -37,6 +37,10 @@ debug.log
 
 # env files (can opt-in for committing if needed)
 .env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -68,3 +72,32 @@ next-env.d.ts
 # User data files (do not commit real data)
 /data/*.xlsx
 !/data/ejemplo_*.xlsx
+
+# -----------------------------------------------------------------------------
+# SPECIFIC USER EXCLUSIONS (Clean Repo)
+# -----------------------------------------------------------------------------
+
+# AI Assistant Context
+.gemini/
+.claude/
+
+# Documentation (User requested to exclude)
+/docs/
+*.md
+!README.md
+
+# Technical Analysis Files
+ANALISIS_TECNICO.md
+INCONSISTENCIAS.md
+RESUMEN_MEJORAS.md
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!components.json
+!next.config.ts
+!postcss.config.mjs
+!eslint.config.mjs
+
+# Scripts
+/scripts/

@@ -1,5 +1,20 @@
 // types/index.ts
 
+// ✅ FIX: Enum para roles de usuario (evita magic strings)
+export enum UserRole {
+  ADMIN = 'admin',
+  PROFESOR = 'profesor',
+  VISUALIZADOR = 'visualizador',
+}
+
+// Helper para convertir string a UserRole
+export function toUserRole(role: string): UserRole {
+  if (Object.values(UserRole).includes(role as UserRole)) {
+    return role as UserRole;
+  }
+  return UserRole.VISUALIZADOR; // Default seguro
+}
+
 export interface Establecimiento {
   id: number;
   nombre: string;
@@ -7,6 +22,16 @@ export interface Establecimiento {
   prioritarios: boolean; // 80%+ alumnos prioritarios (afecta tabla 60/40 vs 65/35)
   // NOTA: proporcion se movió a Asignacion (depende del ciclo de enseñanza)
   secciones?: string[]; // ["A", "B"]
+
+  // ✨ Cursos combinados (multigrado)
+  cursosCombinadosConfig?: {
+    enabled: boolean;  // ¿Tiene cursos combinados?
+    cursos: {
+      nombre: string;  // "1°-2° Básico A"
+      niveles: number[];  // [1, 2]
+      seccion: string;  // "A"
+    }[];
+  };
 
   // Asignaturas personalizadas del establecimiento
   asignaturas?: Asignatura[];  // Si no existe, usa ASIGNATURAS_BASE

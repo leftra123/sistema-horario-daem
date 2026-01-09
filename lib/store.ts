@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Docente, HorarioData, Establecimiento, Asignatura, BloqueHorario, BloqueConfig, BLOQUES_DEFAULT } from '@/types';
 import {
-  getHorasUsadasEnBloques,
+  getHorasUsadasEnBloquesPorCiclo,
   getHorasDisponiblesParaBloques,
   detectarCicloDesdeCurso
 } from '@/lib/utils/calculos-horas';
@@ -143,26 +143,31 @@ export const useAppStore = create<AppState>()(
           return { success: false, error: 'Docente no encontrado' };
         }
 
-        // Extraer establecimiento ID del cursoKey
+        // Extraer establecimiento ID y detectar ciclo del curso
         const [estIdStr] = cursoKey.split('-');
         const estId = parseInt(estIdStr);
-        const asignacion = docente.asignaciones.find(a => a.establecimientoId === estId);
-
-        if (!asignacion) {
-          return {
-            success: false,
-            error: `⚠️ ${docente.nombre} no tiene asignación en este establecimiento`
-          };
-        }
-
-        // 🆕 AUTO-DETECCIÓN: Validar que el ciclo coincida con el curso
         const cursoNombre = cursoKey.split('-').slice(1).join(' '); // Ej: "3° Básico A"
         const cicloDetectado = detectarCicloDesdeCurso(cursoNombre);
 
-        if (asignacion.ciclo !== cicloDetectado) {
+        // 🆕 CORRECCIÓN: Buscar asignación por establecimiento Y ciclo
+        const asignacion = docente.asignaciones.find(
+          a => a.establecimientoId === estId && a.ciclo === cicloDetectado
+        );
+
+        if (!asignacion) {
+          // Verificar si tiene asignación en el establecimiento pero en otro ciclo
+          const tieneEnEstablecimiento = docente.asignaciones.some(a => a.establecimientoId === estId);
+
+          if (tieneEnEstablecimiento) {
+            return {
+              success: false,
+              error: `⚠️ ${docente.nombre} no tiene asignación de ${cicloDetectado} en este establecimiento. Solo puede enseñar en cursos del ciclo asignado.`
+            };
+          }
+
           return {
             success: false,
-            error: `⚠️ ${docente.nombre} tiene asignación de ${asignacion.ciclo} pero este curso (${cursoNombre}) es ${cicloDetectado}. Actualiza la asignación del docente primero.`
+            error: `⚠️ ${docente.nombre} no tiene asignación en este establecimiento`
           };
         }
 
@@ -207,14 +212,14 @@ export const useAppStore = create<AppState>()(
           }
         }
 
-        // ✅ VALIDACIÓN 5: Verificar horas disponibles (CORREGIDO - usa horasLectivas)
+        // ✅ VALIDACIÓN 5: Verificar horas disponibles por ciclo
         const horasLectivasDisponibles = getHorasDisponiblesParaBloques(asignacion);
-        const horasUsadas = getHorasUsadasEnBloques(docenteId, state.horarios);
+        const horasUsadas = getHorasUsadasEnBloquesPorCiclo(docenteId, state.horarios, cicloDetectado);
 
         if (horasUsadas >= horasLectivasDisponibles) {
           return {
             success: false,
-            error: `⚠️ ${docente.nombre} no tiene horas lectivas disponibles (${horasUsadas}/${horasLectivasDisponibles}h)`
+            error: `⚠️ ${docente.nombre} no tiene horas lectivas disponibles para ${cicloDetectado} (${horasUsadas}/${horasLectivasDisponibles}h usadas)`
           };
         }
 

@@ -3,15 +3,21 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Info } from 'lucide-react';
-import { Docente, Establecimiento } from '@/types';
+import { Docente } from '@/types';
 import { TABLA_60_40, TABLA_65_35 } from '@/lib/constants/tablas-horas';
+import { 
+  getTotalHorasUsadasDocente, 
+  getTotalHorasLectivasDocente, 
+  getTotalHorasNoLectivasDocente, 
+  getTotalHorasPIE, 
+  getTotalHorasDirectiva 
+} from '@/lib/utils/calculos-horas';
 
 interface Props {
   docente: Docente;
-  establecimientos: Establecimiento[];
 }
 
-export default function ExplicacionHoras({ docente, establecimientos }: Props) {
+export default function ExplicacionHoras({ docente }: Props) {
   const getTablaEntry = (proporcion: string, horasContrato: number) => {
     const tabla = proporcion === '65/35' ? TABLA_65_35 : TABLA_60_40;
     return tabla[horasContrato] || { horasLectivas: 0, horasNoLectivas: 0 };
@@ -34,14 +40,14 @@ export default function ExplicacionHoras({ docente, establecimientos }: Props) {
           {/* Introducción */}
           <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
             <p className="text-sm text-blue-900 font-semibold">
-              📊 Cálculo según Ley 20.903 - Tabla {docente.asignaciones[0]?.proporcion || '65/35'}
+              📊 Cálculo según Ley 20.903 - Proporción por ciclo y establecimiento
             </p>
           </div>
 
           {/* Desglose por asignación */}
           {docente.asignaciones.map((asig, idx) => {
-            const est = establecimientos.find(e => e.id === asig.establecimientoId);
-            const proporcion = est?.prioritarios ? '60/40' : '65/35';
+            // Usar la proporción de la asignación directamente (ya calculada al crear/editar)
+            const proporcion = asig.proporcion;
             const tablaEntry = getTablaEntry(proporcion, asig.horasContrato);
             const porcentajeLectivas = proporcion === '65/35' ? 65 : 60;
             const porcentajeNoLectivas = proporcion === '65/35' ? 35 : 40;
@@ -52,6 +58,7 @@ export default function ExplicacionHoras({ docente, establecimientos }: Props) {
                   <h3 className="font-bold text-lg text-gray-800">{asig.establecimientoNombre}</h3>
                   <div className="flex items-center gap-2">
                     <span className="text-xs bg-gray-200 px-2 py-1 rounded font-mono">{asig.cargo}</span>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">{asig.ciclo}</span>
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold">{proporcion}</span>
                   </div>
                 </div>
@@ -101,35 +108,41 @@ export default function ExplicacionHoras({ docente, establecimientos }: Props) {
           {docente.asignaciones.length > 1 && (
             <div className="border-t-2 pt-4">
               <h3 className="font-bold text-gray-800 mb-3">📈 Resumen Total</h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div className="bg-gray-100 rounded p-3 text-center">
                   <p className="text-xs text-gray-600">Total Contrato</p>
                   <p className="text-2xl font-bold text-gray-800">
-                    {docente.asignaciones.reduce((sum, a) => sum + a.horasContrato, 0)}h
+                    {getTotalHorasUsadasDocente(docente)}h
                   </p>
                 </div>
                 <div className="bg-green-100 rounded p-3 text-center">
                   <p className="text-xs text-green-700">Total Lectivas</p>
                   <p className="text-2xl font-bold text-green-700">
-                    {docente.asignaciones.reduce((sum, a) => {
-                      const est = establecimientos.find(e => e.id === a.establecimientoId);
-                      const proporcion = est?.prioritarios ? '60/40' : '65/35';
-                      const entry = getTablaEntry(proporcion, a.horasContrato);
-                      return sum + entry.horasLectivas;
-                    }, 0)}h
+                    {getTotalHorasLectivasDocente(docente)}h
                   </p>
                 </div>
                 <div className="bg-orange-100 rounded p-3 text-center">
                   <p className="text-xs text-orange-700">Total No Lectivas</p>
                   <p className="text-2xl font-bold text-orange-700">
-                    {docente.asignaciones.reduce((sum, a) => {
-                      const est = establecimientos.find(e => e.id === a.establecimientoId);
-                      const proporcion = est?.prioritarios ? '60/40' : '65/35';
-                      const entry = getTablaEntry(proporcion, a.horasContrato);
-                      return sum + entry.horasNoLectivas;
-                    }, 0)}h
+                    {getTotalHorasNoLectivasDocente(docente)}h
                   </p>
                 </div>
+                {getTotalHorasPIE(docente) > 0 && (
+                  <div className="bg-blue-100 rounded p-3 text-center">
+                    <p className="text-xs text-blue-700">Total PIE</p>
+                    <p className="text-2xl font-bold text-blue-700">
+                      {getTotalHorasPIE(docente)}h
+                    </p>
+                  </div>
+                )}
+                {getTotalHorasDirectiva(docente) > 0 && (
+                  <div className="bg-emerald-100 rounded p-3 text-center">
+                    <p className="text-xs text-emerald-700">Total Directiva</p>
+                    <p className="text-2xl font-bold text-emerald-700">
+                      {getTotalHorasDirectiva(docente)}h
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -12,7 +12,7 @@ import { DocenteFormModal } from './DocenteFormModal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import ExplicacionHoras from './ExplicacionHoras';
 import VistaHorarioDocente from './VistaHorarioDocente';
-import { getHorasLectivasDocente, getHorasUsadasEnBloques } from '@/lib/utils/calculos-horas';
+import { getHorasLectivasDocente, getHorasUsadasEnBloques, getTotalHorasUsadasDocente } from '@/lib/utils/calculos-horas';
 import {
   exportarHorarioDocenteExcel,
   exportarHorarioDocentePDF
@@ -123,7 +123,7 @@ export function DocentesList() {
                 const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
                 const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
                 const horasDisponibles = Math.max(0, horasLectivas - horasUsadas);
-                const totalHoras = docente.asignaciones.reduce((sum, a) => sum + a.horasContrato, 0);
+                const totalHoras = getTotalHorasUsadasDocente(docente);
                 const porcentajeUsado = horasLectivas > 0 ? (horasUsadas / horasLectivas) * 100 : 0;
                 const isExpanded = expandedId === docente.id;
 
@@ -168,7 +168,7 @@ export function DocentesList() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <ExplicacionHoras docente={docente} establecimientos={establecimientos} />
+                        <ExplicacionHoras docente={docente} />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
@@ -184,8 +184,7 @@ export function DocentesList() {
                                 const filename = exportarHorarioDocenteExcel(
                                   docente,
                                   horarios,
-                                  bloques,
-                                  est.nombre
+                                  bloques
                                 );
                                 toast.success(`✅ Exportado: ${filename}`);
                               }
