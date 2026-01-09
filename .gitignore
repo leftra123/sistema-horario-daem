@@ -20,7 +20,7 @@
 # production
 /build
 /dist
-
+sistema-horario/docs
 # misc
 .DS_Store
 *.pem
