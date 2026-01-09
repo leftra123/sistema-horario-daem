@@ -120,7 +120,7 @@ export function DocentesList() {
             </TableHeader>
             <TableBody>
               {docentesFiltrados.map((docente) => {
-                const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
+                const horasLectivas = getHorasLectivasDocente(docente);
                 const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
                 const horasDisponibles = Math.max(0, horasLectivas - horasUsadas);
                 const totalHoras = getTotalHorasUsadasDocente(docente);

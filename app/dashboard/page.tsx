@@ -34,7 +34,7 @@ export default function DashboardPage() {
 
             d.asignaciones.forEach(a => {
                 const cargo = a.cargo.toUpperCase();
-                const horasLectivas = getHorasLectivasDocente(d, establecimientos);
+                const horasLectivas = getHorasLectivasDocente(d);
                 const proporcion = horasLectivas > 0 ? horasUsadas / horasLectivas : 0;
                 const horasUsadasCargo = a.horasContrato * proporcion;
 
@@ -377,7 +377,7 @@ export default function DashboardPage() {
                                                 <TableBody>
                                                     {docentesLocal.map((docente) => {
                                                         const asignacion = docente.asignaciones.find(a => a.establecimientoId.toString() === selectedEstId);
-                                                        const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
+                                                        const horasLectivas = getHorasLectivasDocente(docente);
                                                         const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
                                                         const horasDisponibles = Math.max(0, horasLectivas - horasUsadas);
                                                         const porcentajeUsado = horasLectivas > 0 ? (horasUsadas / horasLectivas) * 100 : 0;

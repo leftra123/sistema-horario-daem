@@ -37,7 +37,7 @@ export function autoGenerarHorarioCurso(
     const tieneAsignacion = d.asignaciones.some(a => a.establecimientoId === establecimientoId);
     if (!tieneAsignacion) return false;
 
-    const horasLectivas = getHorasLectivasDocente(d, establecimientos);
+    const horasLectivas = getHorasLectivasDocente(d);
     const horasUsadas = getHorasUsadasEnBloques(d.id, horarios);
     return horasLectivas > horasUsadas;
   });
@@ -71,7 +71,7 @@ export function autoGenerarHorarioCurso(
         if (intentos++ > maxIntentos) break;
 
         // Verificar horas disponibles
-        const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
+        const horasLectivas = getHorasLectivasDocente(docente);
         const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
         const disponibles = horasLectivas - horasUsadas;
 

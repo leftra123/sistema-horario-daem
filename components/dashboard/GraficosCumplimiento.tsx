@@ -44,7 +44,7 @@ export function GraficosCumplimiento() {
       );
 
       const totalLectivas = docentesEst.reduce((sum, d) => {
-        return sum + getHorasLectivasDocente(d, establecimientos);
+        return sum + getHorasLectivasDocente(d);
       }, 0);
 
       const totalUsadas = docentesEst.reduce((sum, d) => {
@@ -86,7 +86,7 @@ export function GraficosCumplimiento() {
   // Cumplimiento global
   const cumplimientoGlobal = useMemo(() => {
     const totalLectivas = docentes.reduce((sum, d) => {
-      return sum + getHorasLectivasDocente(d, establecimientos);
+      return sum + getHorasLectivasDocente(d);
     }, 0);
 
     const totalUsadas = docentes.reduce((sum, d) => {

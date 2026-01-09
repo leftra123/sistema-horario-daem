@@ -30,7 +30,7 @@ export default function Home() {
   );
 
   const totalHorasLectivas = docentes.reduce((sum, d) =>
-    sum + getHorasLectivasDocente(d, establecimientos), 0
+    sum + getHorasLectivasDocente(d), 0
   );
 
   const totalHorasUsadas = docentes.reduce((sum, d) =>

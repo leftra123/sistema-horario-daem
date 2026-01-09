@@ -36,7 +36,7 @@ export default function VistaHorarioDocente({ docente }: VistaHorarioDocenteProp
 
   // Calcular horas lectivas y no lectivas
   const estadisticas = useMemo(() => {
-    const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
+    const horasLectivas = getHorasLectivasDocente(docente);
     const horasUsadas = getHorasUsadasEnBloques(docente.id, horarios);
     const horasNoLectivas = docente.asignaciones.reduce((sum, a) => sum + a.horasContrato, 0) - horasLectivas;
 

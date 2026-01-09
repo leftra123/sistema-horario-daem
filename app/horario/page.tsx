@@ -658,7 +658,7 @@ export default function HorarioPage() {
                   const docente = docentes.find(d => d.id === parseInt(docenteSel));
                   if (!docente) return null;
 
-                  const horasLectivas = getHorasLectivasDocente(docente, establecimientos);
+                  const horasLectivas = getHorasLectivasDocente(docente);
                   const horasUsadas = getHorasUsadasEnBloques(parseInt(docenteSel), horarios);
                   const disponibles = Math.max(0, horasLectivas - horasUsadas);
                   const porcentajeUsado = horasLectivas > 0 ? (horasUsadas / horasLectivas) * 100 : 0;
